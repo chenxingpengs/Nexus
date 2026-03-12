@@ -1,0 +1,242 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Pages"
+             x:Class="Nexus.Views.Pages.UpdatePage"
+             x:DataType="vm:UpdateViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20" Margin="0,0,0,32">
+            
+            <StackPanel Spacing="8" Margin="0,0,0,8">
+                <TextBlock Text="系统更新"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           Foreground="#1976D2"/>
+                <TextBlock Text="检查并安装最新版本"
+                           FontSize="14"
+                           Foreground="#757575"/>
+            </StackPanel>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                    <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+                            Background="#E3F2FD" CornerRadius="12" Width="72" Height="72" Padding="16"
+                            VerticalAlignment="Center"
+                            Margin="0,0,20,0">
+                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Sync}"
+                                       FontSize="32"
+                                       Foreground="#1976D2"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="当前版本" Foreground="#757575" FontSize="13" VerticalAlignment="Center"/>
+                        <Border Background="#F5F5F5" CornerRadius="4" Padding="8,2">
+                            <TextBlock Text="{Binding CurrentVersion}" FontWeight="SemiBold" FontSize="14" Foreground="#424242"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                        <TextBlock Text="最新版本" Foreground="#757575" FontSize="13" VerticalAlignment="Center"/>
+                        <Border Background="#F5F5F5" CornerRadius="4" Padding="8,2">
+                            <TextBlock Text="{Binding LatestVersion}" FontWeight="SemiBold" FontSize="14" Foreground="#424242"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                        <TextBlock Text="状态" Foreground="#757575" FontSize="13" VerticalAlignment="Center"/>
+                        <Border Background="#E8F5E9" CornerRadius="4" Padding="8,2">
+                            <TextBlock Text="{Binding StatusMessage}" FontWeight="Medium" FontSize="13"
+                                       Foreground="#4CAF50"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding IsUpdateAvailable}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#FFF3E0" CornerRadius="8" Padding="10">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Download}" FontSize="20" Foreground="#FF9800"/>
+                        </Border>
+                        <TextBlock Text="发现新版本" FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="版本号" Foreground="#757575" FontSize="13"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LatestVersion}" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="发布日期" Foreground="#757575" FontSize="13" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ReleaseDate}" FontSize="14" Foreground="#424242" Margin="0,8,0,0"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="文件大小" Foreground="#757575" FontSize="13" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FileSize}" FontSize="14" Foreground="#424242" Margin="0,8,0,0"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="更新说明" Foreground="#757575" FontSize="13"/>
+                        <Border Background="#F5F5F5" CornerRadius="8" Padding="16" MaxHeight="150">
+                            <ScrollViewer>
+                                <TextBlock Text="{Binding ReleaseNotes}" TextWrapping="Wrap" FontSize="13" Foreground="#424242"/>
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
+                        <Button Command="{Binding DownloadUpdateCommand}" CornerRadius="8" Padding="16,10"
+                                Background="#1976D2" Foreground="#FFFFFF">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Download}" FontSize="16"/>
+                                <TextBlock Text="立即下载" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding SkipVersionCommand}" CornerRadius="8" Padding="16,10"
+                                Background="#F5F5F5" Foreground="#424242">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Forward}" FontSize="16"/>
+                                <TextBlock Text="跳过此版本" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding IsDownloading}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#E3F2FD" CornerRadius="8" Padding="10">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Sync}" FontSize="20" Foreground="#1976D2"/>
+                        </Border>
+                        <TextBlock Text="正在下载更新..." FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <ProgressBar Value="{Binding DownloadProgress}" Maximum="100" Height="8" CornerRadius="4"/>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding DownloadedSize}" Foreground="#757575" FontSize="13"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DownloadSpeed}" Foreground="#757575" FontSize="13"/>
+                    </Grid>
+
+                    <Button Command="{Binding CancelDownloadCommand}" CornerRadius="8" Padding="16,10"
+                            Background="#FFEBEE" Foreground="#E53935" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Cancel}" FontSize="16"/>
+                            <TextBlock Text="取消下载" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding IsDownloadComplete}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#E8F5E9" CornerRadius="8" Padding="10">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="20" Foreground="#4CAF50"/>
+                        </Border>
+                        <TextBlock Text="下载完成" FontSize="18" FontWeight="SemiBold" Foreground="#4CAF50" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Text="点击下方按钮开始安装，安装完成后应用将自动重启。"
+                               Foreground="#757575"
+                               FontSize="14"
+                               TextWrapping="Wrap"/>
+
+                    <Button Command="{Binding InstallUpdateCommand}" CornerRadius="8" Padding="16,10"
+                            Background="#4CAF50" Foreground="#FFFFFF">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Save}" FontSize="16"/>
+                            <TextBlock Text="立即安装" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding IsNoUpdate}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Background="#E8F5E9" CornerRadius="8" Padding="10">
+                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="20" Foreground="#4CAF50"/>
+                    </Border>
+                    <TextBlock Text="已是最新版本" FontWeight="SemiBold" FontSize="16" Foreground="#4CAF50" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding HasError}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Background="#FFEBEE" CornerRadius="8" Padding="10">
+                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Cancel}" FontSize="20" Foreground="#E53935"/>
+                    </Border>
+                    <TextBlock Text="{Binding StatusMessage}" FontWeight="SemiBold" FontSize="16" Foreground="#E53935" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <Button Command="{Binding CheckUpdateCommand}" CornerRadius="8" Padding="16,10" HorizontalAlignment="Left"
+                    Background="#1976D2" Foreground="#FFFFFF"
+                    IsEnabled="{Binding !IsChecking}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Sync}" FontSize="16"/>
+                    <TextBlock Text="检查更新" FontWeight="Medium"/>
+                </StackPanel>
+            </Button>
+
+            <StackPanel Spacing="12" Margin="0,16,0,0">
+                <TextBlock Text="更新设置"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="#424242"/>
+            </StackPanel>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000">
+                <StackPanel Spacing="20">
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="启动时自动检查更新" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
+                                <TextBlock Text="每次启动应用时自动检查新版本" FontSize="12" Foreground="#9E9E9E"/>
+                            </StackPanel>
+                            <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding AutoCheckUpdate}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="GitHub 用户名" 
+                                       FontSize="13" Foreground="#757575" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding GitHubOwner}" 
+                                     CornerRadius="6" Padding="8,6"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="GitHub 仓库名" 
+                                       FontSize="13" Foreground="#757575" VerticalAlignment="Center" Margin="0,12,0,0"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding GitHubRepo}" 
+                                     CornerRadius="6" Padding="8,6" Margin="0,12,0,0"/>
+                        </Grid>
+                    </Border>
+
+                    <Button Command="{Binding SaveConfigCommand}" CornerRadius="8" Padding="16,10" HorizontalAlignment="Left"
+                            Background="#4CAF50" Foreground="#FFFFFF">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Save}" FontSize="16"/>
+                            <TextBlock Text="保存配置" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

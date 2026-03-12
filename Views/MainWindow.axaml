@@ -1,0 +1,205 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels"
+        x:Class="Nexus.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Nexus - 设备绑定"
+        Width="800" Height="650"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
+
+    <Window.DataContext>
+        <vm:MainWindowViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#FFFFFF" Padding="20" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15">
+                <TextBlock Text="Nexus" FontSize="28" FontWeight="Bold" Foreground="#1976D2"/>
+                <TextBlock Text="设备绑定" FontSize="28" Foreground="#666666" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="40">
+            
+            <Panel IsVisible="{Binding IsShowLoading}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="18" Foreground="#666666" 
+                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowQrCode}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <TextBlock Text="请使用微信小程序扫码绑定" FontSize="24" FontWeight="Bold" 
+                               Foreground="#333333" HorizontalAlignment="Center"/>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="12" Padding="20" 
+                            BoxShadow="0 4 12 0 #20000000">
+                        <Image Width="250" Height="250" Source="{Binding QrCodeImage}"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="请使用小程序首页的扫码功能扫描此二维码" 
+                                   FontSize="14" Foreground="#888888" 
+                                   HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                   FontSize="14" Foreground="#1976D2" 
+                                   HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="12,8" 
+                            BorderBrush="{Binding ConnectionStatusColor}" BorderThickness="1" 
+                            HorizontalAlignment="Center">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <Ellipse Width="12" Height="12" Fill="{Binding ConnectionStatusColor}" 
+                                         Stroke="{Binding ConnectionStatusColor}" StrokeThickness="2"/>
+                                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="14" 
+                                           Foreground="#666666" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                            
+                            <Panel IsVisible="{Binding IsConnectionGood}">
+                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE9D9;" FontSize="12" Foreground="#4CAF50" 
+                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <TextBlock Text="连接质量：" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding LatencyQualityText}" FontSize="11" 
+                                               Foreground="#4CAF50" VerticalAlignment="Center" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Panel>
+                            
+                            <Panel IsVisible="{Binding IsConnectionPoor}">
+                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE7BA;" FontSize="12" Foreground="#FF9800" 
+                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <TextBlock Text="网络延迟较高" FontSize="11" Foreground="#FF9800" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Panel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="设备信息" FontSize="12" Foreground="#AAAAAA" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding DeviceId}" FontSize="11" Foreground="#CCCCCC" 
+                                   FontFamily="Consolas" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowVerifySuccess}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#E3F2FD" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE73E;" FontSize="48" Foreground="#1976D2" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="扫码验证成功" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#1976D2" HorizontalAlignment="Center"/>
+                        <TextBlock Text="请在小程序中完成绑定" FontSize="18" 
+                                   Foreground="#666666" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="8" Padding="20" 
+                            BorderBrush="#E0E0E0" BorderThickness="1" HorizontalAlignment="Center">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="扫码用户" FontSize="12" Foreground="#888888"/>
+                            <TextBlock Text="{Binding VerifyUserName}" FontSize="16" 
+                                       Foreground="#333333" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                    <TextBlock Text="等待小程序确认绑定..." FontSize="14" 
+                               Foreground="#888888" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowBindSuccess}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#E8F5E9" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE73E;" FontSize="48" Foreground="#4CAF50" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="绑定成功！" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#4CAF50" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="8" Padding="20" 
+                            BorderBrush="#E0E0E0" BorderThickness="1" HorizontalAlignment="Center">
+                        <StackPanel Spacing="15">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="绑定班级：" FontSize="14" Foreground="#888888"/>
+                                <TextBlock Text="{Binding BindClassName}" FontSize="16" 
+                                           Foreground="#333333" FontWeight="Medium"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="设备ID：" FontSize="14" Foreground="#888888"/>
+                                <TextBlock Text="{Binding DeviceId}" FontSize="12" 
+                                           Foreground="#666666" FontFamily="Consolas"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Text="设备已成功绑定，可以开始使用考勤功能" 
+                               FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowError}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#FFEBEE" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE783;" FontSize="48" Foreground="#F44336" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="绑定失败" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#F44336" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding ErrorMessage}" FontSize="16" 
+                                   Foreground="#666666" HorizontalAlignment="Center" 
+                                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400"/>
+                    </StackPanel>
+                    
+                    <Button Content="重新尝试" Command="{Binding RefreshTokenCommand}"
+                            Width="150" Height="45" FontSize="16" CornerRadius="8"
+                            Background="#1976D2" Foreground="#FFFFFF"
+                            HorizontalAlignment="Center"
+                            IsVisible="{Binding IsShowError}"
+                            IsEnabled="{Binding IsShowError}"/>
+                </StackPanel>
+            </Panel>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#FFFFFF" Padding="15" 
+                BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+                <Button Content="刷新二维码" Command="{Binding RefreshTokenCommand}"
+                        Width="130" Height="40" FontSize="14" CornerRadius="6"
+                        Background="#1976D2" Foreground="#FFFFFF"
+                        IsVisible="{Binding IsShowQrCode}"/>
+                
+                <Button Content="重新绑定" Command="{Binding RefreshTokenCommand}"
+                        Width="130" Height="40" FontSize="14" CornerRadius="6"
+                        Background="#1976D2" Foreground="#FFFFFF"
+                        IsVisible="{Binding IsShowBindSuccess}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

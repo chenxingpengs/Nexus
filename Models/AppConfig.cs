@@ -1,0 +1,23 @@
+using System;
+
+namespace Nexus.Models
+{
+    public class AppConfig
+    {
+        public string DeviceId { get; set; } = string.Empty;
+        public string DeviceName { get; set; } = string.Empty;
+        public string? AccessToken { get; set; }
+        public DateTime? TokenExpiresAt { get; set; }
+        public BindInfo? BindInfo { get; set; }
+        public string ServerUrl { get; set; } = "https://api.hqzx.me";
+
+        public bool IsBound => !string.IsNullOrEmpty(AccessToken) && BindInfo != null;
+    }
+
+    public class BindInfo
+    {
+        public int ClassId { get; set; }
+        public string ClassName { get; set; } = string.Empty;
+        public DateTime BindTime { get; set; }
+    }
+}

@@ -1,0 +1,32 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Nexus.App"
+             xmlns:fluent="using:FluentAvalonia.Styling"
+             xmlns:local="using:Nexus"
+             xmlns:styling="using:FluentAvalonia.Styling"
+             RequestedThemeVariant="Default">
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+    <Application.Styles>
+        <fluent:FluentAvaloniaTheme />
+    </Application.Styles>
+    
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/hqzx.png"
+                      ToolTipText="Nexus - 红旗中学智慧校园系统"
+                      IsVisible="False">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="显示主窗口"/>
+                        <NativeMenuItemSeparator/>
+                        <NativeMenuItem Header="退出"/>
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+</Application>

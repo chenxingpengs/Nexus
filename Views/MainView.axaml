@@ -1,0 +1,168 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        x:Class="Nexus.Views.MainView"
+        x:DataType="vm:MainViewModel"
+        Title="Nexus"
+        Width="1000" Height="700"
+        MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        TransparencyLevelHint="AcrylicBlur"
+        Background="Transparent">
+
+    <Window.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="4,2"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="#1A1976D2"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#281976D2"/>
+            <Setter Property="BorderBrush" Value="#1976D2"/>
+            <Setter Property="BorderThickness" Value="0,0,3,0"/>
+        </Style>
+        <Style Selector="Button.nav-btn">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="4,2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.nav-btn:pointerover">
+            <Setter Property="Background" Value="#1AE81123"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        
+        <Border Grid.Row="0" Background="#1976D2" Padding="20,12" BoxShadow="0 2 8 0 #33000000">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Background="#FFFFFF" CornerRadius="8" Padding="8" Width="36" Height="36">
+                        <TextBlock Text="&#xE80F;" FontSize="16" Foreground="#1976D2" 
+                                   FontFamily="Segoe MDL2 Assets" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="Nexus"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="#FFFFFF"/>
+                        <TextBlock Text="{Binding ClassName}"
+                                   FontSize="12"
+                                   Foreground="#CCFFFFFF"
+                                   IsVisible="{Binding ClassName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <Border Grid.Column="1" Background="#1AFFFFFF" CornerRadius="20" Padding="12,6" 
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse Width="8" Height="8" Fill="#4CAF50"/>
+                        <TextBlock Text="{Binding DeviceStatus}"
+                                   FontSize="13"
+                                   FontWeight="Medium"
+                                   Foreground="#FFFFFF"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="2" Background="#1AFFFFFF" CornerRadius="6" Padding="10,4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="&#xE946;" FontSize="12" Foreground="#CCFFFFFF" 
+                                   FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding DeviceIdDisplay}"
+                                   FontSize="11"
+                                   FontFamily="Consolas"
+                                   Foreground="#CCFFFFFF"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="220,*">
+            
+            <Border Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
+                <DockPanel Margin="12,16">
+                    <StackPanel DockPanel.Dock="Top" Spacing="4">
+                        <TextBlock Text="导航菜单" FontSize="12" Foreground="#9E9E9E" 
+                                   FontWeight="Medium" Margin="12,0,0,8"/>
+                        
+                        <ListBox ItemsSource="{Binding NavigationItems}"
+                                 SelectedIndex="{Binding SelectedNavigationItem}"
+                                 Background="Transparent"
+                                 BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="14">
+                                        <Border Background="#1A1976D2" CornerRadius="6" Width="32" Height="32">
+                                            <ui:SymbolIcon Symbol="{Binding IconSymbol}" 
+                                                           FontSize="16" 
+                                                           Foreground="#1976D2"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding Label}" 
+                                                   FontSize="14"
+                                                   FontWeight="Medium"
+                                                   Foreground="#424242"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                    
+                    <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+                        <Border Height="1" Background="#E0E0E0" Margin="0,8"/>
+                        
+                        <Button Classes="nav-btn"
+                                Command="{Binding UnbindCommand}"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="14">
+                                <Border Background="#1AE81123" CornerRadius="6" Width="32" Height="32">
+                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Cancel}" 
+                                                   FontSize="16" 
+                                                   Foreground="#E81123"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="解绑设备" 
+                                           FontSize="14" 
+                                           FontWeight="Medium"
+                                           Foreground="#E81123" 
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <TextBlock Text="v1.0.0" FontSize="10" Foreground="#BDBDBD" 
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            
+            <Border Grid.Column="1" Background="#F5F5F5">
+                <ScrollViewer>
+                    <ContentControl Content="{Binding CurrentPage}" Margin="24,20"/>
+                </ScrollViewer>
+            </Border>
+            
+        </Grid>
+    </Grid>
+</Window>
