@@ -112,6 +112,7 @@ namespace Nexus.Services
         public async Task<(bool Success, string? ErrorMessage)> ConnectAsync(
             string token,
             string deviceId,
+            string deviceType = "classroom_terminal",
             int maxRetries = 10)
         {
             return await ErrorHandlingService.ExecuteAsync(async () =>
@@ -133,6 +134,7 @@ namespace Nexus.Services
                 Debug.WriteLine($"[SocketIO] 命名空间: /desktop/bind");
                 Debug.WriteLine($"[SocketIO] Token: {token.Substring(0, Math.Min(20, token.Length))}...");
                 Debug.WriteLine($"[SocketIO] DeviceId: {deviceId}");
+                Debug.WriteLine($"[SocketIO] DeviceType: {deviceType}");
 
                 UpdateConnectionInfo(ConnectionStatus.Connecting, "正在建立WebSocket连接...");
 
@@ -142,7 +144,8 @@ namespace Nexus.Services
                     Query = new Dictionary<string, string>
                     {
                         { "token", token },
-                        { "device_id", deviceId }
+                        { "device_id", deviceId },
+                        { "device_type", deviceType }
                     },
                     Reconnection = true,
                     ReconnectionAttempts = maxRetries,

@@ -61,6 +61,8 @@ namespace Nexus.Services
                 {
                     DeviceId = Config.DeviceId,
                     DeviceName = Config.DeviceName,
+                    DeviceType = Config.DeviceType,
+                    AppVersion = Config.AppVersion,
                     AccessToken = !string.IsNullOrEmpty(Config.AccessToken) 
                         ? EncryptToken(Config.AccessToken) 
                         : null,

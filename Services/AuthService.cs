@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Nexus.Models;
+using System.Reflection;
 
 namespace Nexus.Services
 {
@@ -24,12 +25,18 @@ namespace Nexus.Services
             };
         }
 
+        private string GetAppVersion()
+        {
+            return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        }
+
         public async Task<(bool Success, string? ErrorMessage)> VerifyDeviceAsync()
         {
             var config = _configService.Config;
             
             System.Diagnostics.Debug.WriteLine($"[AuthService] VerifyDeviceAsync 开始");
             System.Diagnostics.Debug.WriteLine($"[AuthService] DeviceId={config.DeviceId}");
+            System.Diagnostics.Debug.WriteLine($"[AuthService] DeviceType={config.DeviceType}");
             System.Diagnostics.Debug.WriteLine($"[AuthService] ServerUrl={config.ServerUrl}");
             
             if (string.IsNullOrEmpty(config.DeviceId))
@@ -42,7 +49,8 @@ namespace Nexus.Services
             {
                 StatusChanged?.Invoke("正在验证设备...");
                 
-                var url = $"{config.ServerUrl}/desktop/device/verify?device_id={Uri.EscapeDataString(config.DeviceId)}";
+                var appVersion = config.AppVersion ?? GetAppVersion();
+                var url = $"{config.ServerUrl}/desktop/device/verify?device_id={Uri.EscapeDataString(config.DeviceId)}&device_type={Uri.EscapeDataString(config.DeviceType)}&app_version={Uri.EscapeDataString(appVersion)}";
                 System.Diagnostics.Debug.WriteLine($"[AuthService] 请求URL: {url}");
                 
                 var response = await _httpClient.GetAsync(url);
@@ -78,6 +86,11 @@ namespace Nexus.Services
                     result.Data.TokenExpiresAt
                 );
 
+                if (!string.IsNullOrEmpty(result.Data.DeviceType))
+                {
+                    _configService.Config.DeviceType = result.Data.DeviceType;
+                }
+
                 StatusChanged?.Invoke("设备验证成功");
                 AuthStateChanged?.Invoke(true);
                 
@@ -109,8 +122,14 @@ namespace Nexus.Services
             {
                 StatusChanged?.Invoke("正在获取访问令牌...");
                 
+                var appVersion = config.AppVersion ?? GetAppVersion();
                 var url = $"{config.ServerUrl}/desktop/device/auth";
-                var body = new { device_id = config.DeviceId };
+                var body = new 
+                { 
+                    device_id = config.DeviceId,
+                    device_type = config.DeviceType,
+                    app_version = appVersion
+                };
                 var json = JsonSerializer.Serialize(body);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -187,6 +206,7 @@ namespace Nexus.Services
     public class VerifyData
     {
         public bool Bound { get; set; }
+        public string? DeviceType { get; set; }
         public int ClassId { get; set; }
         public string? ClassName { get; set; }
         public string? AccessToken { get; set; }

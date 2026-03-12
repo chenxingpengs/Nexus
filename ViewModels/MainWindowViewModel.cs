@@ -50,6 +50,20 @@ namespace Nexus.ViewModels
             set => SetProperty(ref _deviceName, value);
         }
 
+        private string _deviceType = "classroom_terminal";
+        public string DeviceType
+        {
+            get => _deviceType;
+            set => SetProperty(ref _deviceType, value);
+        }
+
+        private string? _appVersion;
+        public string? AppVersion
+        {
+            get => _appVersion;
+            set => SetProperty(ref _appVersion, value);
+        }
+
         private string _statusMessage = "正在获取绑定二维码...";
         public string StatusMessage
         {
@@ -325,7 +339,19 @@ namespace Nexus.ViewModels
                 _configService.SetDeviceInfo(DeviceId, DeviceName);
             }
 
+            if (!string.IsNullOrEmpty(_configService.Config.DeviceType))
+            {
+                DeviceType = _configService.Config.DeviceType;
+            }
+
+            AppVersion = _configService.Config.AppVersion ?? GetAppVersion();
+
             _ = RefreshToken();
+        }
+
+        private string GetAppVersion()
+        {
+            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
         }
 
         #endregion
@@ -635,11 +661,13 @@ namespace Nexus.ViewModels
 
             await _socketIOService.DisconnectAsync();
 
-            var url = $"{BaseUrl}/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}";
+            var url = $"{BaseUrl}/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}&device_type={Uri.EscapeDataString(DeviceType)}&app_version={Uri.EscapeDataString(AppVersion ?? "")}";
             
             System.Diagnostics.Debug.WriteLine($"[CampusLink] 请求 URL: {url}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceId: {DeviceId}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceName: {DeviceName}");
+            System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceType: {DeviceType}");
+            System.Diagnostics.Debug.WriteLine($"[CampusLink] AppVersion: {AppVersion}");
 
             var (success, responseData, errorMessage) = await ErrorHandlingService.ExecuteAsync<string?>(
                 async () =>
@@ -703,7 +731,7 @@ namespace Nexus.ViewModels
 
             ConnectionStatus = Services.ConnectionStatus.Connecting;
             StatusMessage = "正在连接 WebSocket...";
-            var (wsSuccess, wsError) = await _socketIOService.ConnectAsync(Token, DeviceId, maxRetries: 3);
+            var (wsSuccess, wsError) = await _socketIOService.ConnectAsync(Token, DeviceId, DeviceType, maxRetries: 3);
 
             if (!wsSuccess)
             {

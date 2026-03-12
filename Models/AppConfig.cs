@@ -6,6 +6,8 @@ namespace Nexus.Models
     {
         public string DeviceId { get; set; } = string.Empty;
         public string DeviceName { get; set; } = string.Empty;
+        public string DeviceType { get; set; } = "classroom_terminal";
+        public string? AppVersion { get; set; }
         public string? AccessToken { get; set; }
         public DateTime? TokenExpiresAt { get; set; }
         public BindInfo? BindInfo { get; set; }
