@@ -243,6 +243,6 @@ Nexus-{version}-win-x64.exe
 
 <div align="center">
 
-**技术支持：珠海市红旗中学信息中心**
+**技术支持：陈星鹏**
 
 </div>
