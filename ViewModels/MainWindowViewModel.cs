@@ -1,22 +1,16 @@
+using CommunityToolkit.Mvvm.Input;
+using Nexus.Services;
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Avalonia.Media.Imaging;
-using CommunityToolkit.Mvvm.Input;
-using System.Drawing;
-using System.Drawing.Imaging;
-using Nexus.Services;
-using System.Text.Json;
 
 namespace Nexus.ViewModels
 {
     public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
-        private const string BaseUrl = "https://api.hqzx.me";
-
         public event Action? BindSuccessAndReady;
 
 
@@ -288,24 +282,13 @@ namespace Nexus.ViewModels
 
         private static string GetDeviceUniqueId()
         {
-            try
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    using var sha = System.Security.Cryptography.SHA256.Create();
-                    var machineName = Environment.MachineName;
-                    var userName = Environment.UserName;
-                    var osVersion = Environment.OSVersion.ToString();
-                    var combined = $"{machineName}_{userName}_{osVersion}";
-                    var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(combined));
-                    return "device_" + Convert.ToHexString(hash).Substring(0, 16).ToLower();
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"GetDeviceUniqueId error: {ex.Message}");
-            }
-            return "device_" + Guid.NewGuid().ToString("N").Substring(0, 16);
+            var (deviceId, _, _) = DeviceIdentifier.GetDeviceInfo();
+            return deviceId;
+        }
+
+        private static (string DeviceId, string? MacAddress, string? IpAddress) GetFullDeviceInfo()
+        {
+            return DeviceIdentifier.GetDeviceInfo();
         }
 
         public MainWindowViewModel()
@@ -316,7 +299,7 @@ namespace Nexus.ViewModels
                 Timeout = TimeSpan.FromSeconds(30)
             };
             _qrCodeService = new QRCodeService();
-            _socketIOService = new SocketIOService(BaseUrl);
+            _socketIOService = new SocketIOService(_configService.Config.ServerUrl);
 
             _socketIOService.MessageReceived += OnSocketIOMessageReceived;
             _socketIOService.ErrorOccurred += OnSocketIOErrorOccurred;
@@ -366,7 +349,7 @@ namespace Nexus.ViewModels
                 ConnectionLatency = info.LatencyMs;
                 ReconnectCount = info.ReconnectCount;
                 ConnectedAt = info.ConnectedAt;
-                
+
                 if (!string.IsNullOrEmpty(info.LastError))
                 {
                     StatusMessage = info.LastError;
@@ -521,7 +504,7 @@ namespace Nexus.ViewModels
         {
             System.Diagnostics.Debug.WriteLine($"[Nexus] HandleVerifySuccess 开始执行");
             System.Diagnostics.Debug.WriteLine($"[Nexus] 当前 BindState: {BindState}");
-            
+
             _bindState = BindState.VerifySuccess;
             OnPropertyChanged(nameof(BindState));
             OnPropertyChanged(nameof(IsShowQrCode));
@@ -529,9 +512,9 @@ namespace Nexus.ViewModels
             OnPropertyChanged(nameof(IsShowVerifySuccess));
             OnPropertyChanged(nameof(IsShowBindSuccess));
             OnPropertyChanged(nameof(IsShowError));
-            
+
             StatusMessage = message;
-            
+
             System.Diagnostics.Debug.WriteLine($"[Nexus] 设置后 BindState: {BindState}");
             System.Diagnostics.Debug.WriteLine($"[Nexus] IsShowVerifySuccess: {IsShowVerifySuccess}");
 
@@ -542,7 +525,7 @@ namespace Nexus.ViewModels
                     : "";
                 System.Diagnostics.Debug.WriteLine($"[Nexus] VerifyUserName: {VerifyUserName}");
             }
-            
+
             System.Diagnostics.Debug.WriteLine($"[Nexus] HandleVerifySuccess 完成");
         }
 
@@ -566,19 +549,19 @@ namespace Nexus.ViewModels
             {
                 var dataJson = data.Value.GetRawText();
                 System.Diagnostics.Debug.WriteLine($"[Nexus] data raw: {dataJson}");
-                
+
                 var classId = data.Value.TryGetProperty("class_id", out var classIdElement)
                     ? classIdElement.GetInt32()
                     : 0;
-                
+
                 var className = data.Value.TryGetProperty("class_name", out var classNameElement)
                     ? classNameElement.GetString() ?? ""
                     : "";
-                
+
                 var accessToken = data.Value.TryGetProperty("access_token", out var tokenElement)
                     ? tokenElement.GetString() ?? ""
                     : "";
-                
+
                 var tokenExpiresAt = data.Value.TryGetProperty("token_expires_at", out var expiresElement)
                     ? expiresElement.GetString()
                     : null;
@@ -614,10 +597,10 @@ namespace Nexus.ViewModels
                 {
                     expiresAt = parsedDate;
                 }
-                
+
                 _configService.UpdateBindInfo(classId, BindClassName, accessToken, expiresAt);
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 绑定信息已保存，classId: {classId}, className: {BindClassName}");
-                
+
                 var savedConfig = _configService.Config;
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 验证保存: AccessToken={(!string.IsNullOrEmpty(savedConfig.AccessToken) ? "已保存" : "未保存")}, BindInfo={(savedConfig.BindInfo != null ? savedConfig.BindInfo.ClassName : "null")}");
             }
@@ -631,7 +614,7 @@ namespace Nexus.ViewModels
             }
 
             await Task.Delay(1500);
-            
+
             BindSuccessAndReady?.Invoke();
         }
 
@@ -661,13 +644,27 @@ namespace Nexus.ViewModels
 
             await _socketIOService.DisconnectAsync();
 
-            var url = $"{BaseUrl}/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}&device_type={Uri.EscapeDataString(DeviceType)}&app_version={Uri.EscapeDataString(AppVersion ?? "")}";
-            
+            var (deviceId, macAddress, ipAddress) = DeviceIdentifier.GetDeviceInfo();
+            DeviceId = deviceId;
+
+            var url = $"{_configService.Config.ServerUrl}/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}&device_type={Uri.EscapeDataString(DeviceType)}&app_version={Uri.EscapeDataString(AppVersion ?? "")}";
+
+            if (!string.IsNullOrEmpty(macAddress))
+            {
+                url += $"&mac_address={Uri.EscapeDataString(macAddress)}";
+            }
+            if (!string.IsNullOrEmpty(ipAddress))
+            {
+                url += $"&ip_address={Uri.EscapeDataString(ipAddress)}";
+            }
+
             System.Diagnostics.Debug.WriteLine($"[CampusLink] 请求 URL: {url}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceId: {DeviceId}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceName: {DeviceName}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceType: {DeviceType}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] AppVersion: {AppVersion}");
+            System.Diagnostics.Debug.WriteLine($"[CampusLink] MacAddress: {macAddress}");
+            System.Diagnostics.Debug.WriteLine($"[CampusLink] IpAddress: {ipAddress}");
 
             var (success, responseData, errorMessage) = await ErrorHandlingService.ExecuteAsync<string?>(
                 async () =>
@@ -675,10 +672,10 @@ namespace Nexus.ViewModels
                     System.Diagnostics.Debug.WriteLine($"[CampusLink] 发送 HTTP 请求...");
                     var response = await _httpClient.GetAsync(url);
                     System.Diagnostics.Debug.WriteLine($"[CampusLink] 收到响应: {response.StatusCode}");
-                    
+
                     var content = await response.Content.ReadAsStringAsync();
                     System.Diagnostics.Debug.WriteLine($"[CampusLink] 响应内容长度: {content?.Length ?? 0}");
-                    
+
                     if (!string.IsNullOrEmpty(content) && content.Length > 200)
                     {
                         System.Diagnostics.Debug.WriteLine($"[CampusLink] 响应内容前200字符: {content.Substring(0, 200)}");
@@ -687,7 +684,7 @@ namespace Nexus.ViewModels
                     {
                         System.Diagnostics.Debug.WriteLine($"[CampusLink] 响应内容: {content}");
                     }
-                    
+
                     response.EnsureSuccessStatusCode();
                     return content;
                 },

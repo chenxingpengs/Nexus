@@ -51,7 +51,7 @@ namespace Nexus.Services
                 string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
                 string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
                 string wsUrl = $"{wsBaseUrl}/desktop/bind?token={Uri.EscapeDataString(token)}&device_id={Uri.EscapeDataString(deviceId)}";
-                
+
                 System.Diagnostics.Debug.WriteLine($"[WebSocket] 连接 URL: {wsUrl}");
 
                 await _webSocket.ConnectAsync(new Uri(wsUrl), _cancellationTokenSource.Token);

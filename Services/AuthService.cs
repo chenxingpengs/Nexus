@@ -1,10 +1,9 @@
 using System;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Nexus.Models;
-using System.Reflection;
 
 namespace Nexus.Services
 {
@@ -33,12 +32,12 @@ namespace Nexus.Services
         public async Task<(bool Success, string? ErrorMessage)> VerifyDeviceAsync()
         {
             var config = _configService.Config;
-            
+
             System.Diagnostics.Debug.WriteLine($"[AuthService] VerifyDeviceAsync 开始");
             System.Diagnostics.Debug.WriteLine($"[AuthService] DeviceId={config.DeviceId}");
             System.Diagnostics.Debug.WriteLine($"[AuthService] DeviceType={config.DeviceType}");
             System.Diagnostics.Debug.WriteLine($"[AuthService] ServerUrl={config.ServerUrl}");
-            
+
             if (string.IsNullOrEmpty(config.DeviceId))
             {
                 System.Diagnostics.Debug.WriteLine("[AuthService] 设备ID不存在");
@@ -48,14 +47,14 @@ namespace Nexus.Services
             try
             {
                 StatusChanged?.Invoke("正在验证设备...");
-                
+
                 var appVersion = config.AppVersion ?? GetAppVersion();
                 var url = $"{config.ServerUrl}/desktop/device/verify?device_id={Uri.EscapeDataString(config.DeviceId)}&device_type={Uri.EscapeDataString(config.DeviceType)}&app_version={Uri.EscapeDataString(appVersion)}";
                 System.Diagnostics.Debug.WriteLine($"[AuthService] 请求URL: {url}");
-                
+
                 var response = await _httpClient.GetAsync(url);
                 System.Diagnostics.Debug.WriteLine($"[AuthService] 响应状态码: {response.StatusCode}");
-                
+
                 var content = await response.Content.ReadAsStringAsync();
                 System.Diagnostics.Debug.WriteLine($"[AuthService] 响应内容: {content}");
 
@@ -93,7 +92,7 @@ namespace Nexus.Services
 
                 StatusChanged?.Invoke("设备验证成功");
                 AuthStateChanged?.Invoke(true);
-                
+
                 System.Diagnostics.Debug.WriteLine("[AuthService] 验证成功");
                 return (true, null);
             }
@@ -112,7 +111,7 @@ namespace Nexus.Services
         public async Task<(bool Success, string? Token, string? ErrorMessage)> GetAccessTokenAsync()
         {
             var config = _configService.Config;
-            
+
             if (string.IsNullOrEmpty(config.DeviceId))
             {
                 return (false, null, "设备ID不存在");
@@ -121,11 +120,11 @@ namespace Nexus.Services
             try
             {
                 StatusChanged?.Invoke("正在获取访问令牌...");
-                
+
                 var appVersion = config.AppVersion ?? GetAppVersion();
                 var url = $"{config.ServerUrl}/desktop/device/auth";
-                var body = new 
-                { 
+                var body = new
+                {
                     device_id = config.DeviceId,
                     device_type = config.DeviceType,
                     app_version = appVersion
@@ -161,7 +160,7 @@ namespace Nexus.Services
                 _configService.SaveConfig();
 
                 StatusChanged?.Invoke("获取令牌成功");
-                
+
                 return (true, result.Data.Token, null);
             }
             catch (HttpRequestException ex)

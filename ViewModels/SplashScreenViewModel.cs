@@ -1,6 +1,6 @@
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.Input;
 
 namespace Nexus.ViewModels
 {
@@ -71,7 +71,7 @@ namespace Nexus.ViewModels
         private void OnStart()
         {
             if (_isNavigating) return;
-            
+
             IsNavigating = true;
             HasError = false;
             StatusMessage = "正在加载...";

@@ -1,8 +1,8 @@
+using QRCoder;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using QRCoder;
 
 namespace Nexus.Services
 {

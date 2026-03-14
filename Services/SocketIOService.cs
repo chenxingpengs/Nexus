@@ -177,7 +177,7 @@ namespace Nexus.Services
                     _currentLatency = 0;
                     UpdateConnectionInfo(ConnectionStatus.Disconnected, "WebSocket连接已断开");
                     Disconnected?.Invoke(this, EventArgs.Empty);
-                    
+
                     _reconnectAttempts++;
                     var msg = $"正在重连... (尝试 {_reconnectAttempts})";
                     UpdateConnectionInfo(ConnectionStatus.Reconnecting, msg);
@@ -233,6 +233,46 @@ namespace Nexus.Services
                         LatencyUpdated?.Invoke(this, _currentLatency);
                         UpdateConnectionInfo(ConnectionStatus.Connected, $"已连接 ({_currentLatency}ms)");
                         Debug.WriteLine($"[SocketIO] 延迟: {_currentLatency}ms");
+                    }
+                });
+
+                _socket.On("power_control", response =>
+                {
+                    Debug.WriteLine($"[SocketIO] 收到 power_control: {response}");
+                    try
+                    {
+                        var json = response.GetValue().ToString();
+                        Debug.WriteLine($"[SocketIO] power_control JSON: {json}");
+                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                        var doc = JsonDocument.Parse(bytes);
+                        var element = doc.RootElement.Clone();
+                        doc.Dispose();
+                        MessageReceived?.Invoke(this, element);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SocketIO] 解析 power_control 失败: {ex.Message}");
+                        ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
+                    }
+                });
+
+                _socket.On("wol_request", response =>
+                {
+                    Debug.WriteLine($"[SocketIO] 收到 wol_request: {response}");
+                    try
+                    {
+                        var json = response.GetValue().ToString();
+                        Debug.WriteLine($"[SocketIO] wol_request JSON: {json}");
+                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                        var doc = JsonDocument.Parse(bytes);
+                        var element = doc.RootElement.Clone();
+                        doc.Dispose();
+                        MessageReceived?.Invoke(this, element);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SocketIO] 解析 wol_request 失败: {ex.Message}");
+                        ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
                     }
                 });
 
@@ -307,7 +347,7 @@ namespace Nexus.Services
                 {
                     attempts++;
                     Debug.WriteLine($"[SocketIO] 发送消息失败 (尝试 {attempts}/{maxRetries}): {ex.Message}");
-                    
+
                     if (attempts < maxRetries)
                     {
                         await Task.Delay(1000 * attempts);

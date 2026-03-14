@@ -133,7 +133,7 @@ namespace Nexus.Services
         {
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             var separator = new string('=', 80);
-            
+
             // 构建详细的错误信息
             var logMessage = $"{separator}\n" +
                            $"[{timestamp}] [{operationName}] {context}\n" +
@@ -148,10 +148,10 @@ namespace Nexus.Services
             System.Diagnostics.Debug.WriteLine("");
             System.Diagnostics.Debug.WriteLine(logMessage);
             System.Diagnostics.Debug.WriteLine("");
-            
+
             // 同时输出到控制台
             Console.WriteLine(logMessage);
-            
+
             // 如果有内部异常，也输出
             if (ex.InnerException != null)
             {
@@ -161,7 +161,7 @@ namespace Nexus.Services
                                  $"Message: {ex.InnerException.Message}\n" +
                                  $"StackTrace: {ex.InnerException.StackTrace}\n" +
                                  $"{separator}";
-                
+
                 System.Diagnostics.Debug.WriteLine(innerMessage);
                 Console.WriteLine(innerMessage);
             }

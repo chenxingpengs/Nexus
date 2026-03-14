@@ -11,7 +11,7 @@ namespace Nexus.Models
         public string? AccessToken { get; set; }
         public DateTime? TokenExpiresAt { get; set; }
         public BindInfo? BindInfo { get; set; }
-        public string ServerUrl { get; set; } = "https://api.hqzx.me";
+        public string ServerUrl { get; set; } = "http://localhost:5000";
 
         public bool IsBound => !string.IsNullOrEmpty(AccessToken) && BindInfo != null;
     }

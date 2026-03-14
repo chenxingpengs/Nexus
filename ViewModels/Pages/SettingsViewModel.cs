@@ -1,8 +1,7 @@
+using CommunityToolkit.Mvvm.Input;
+using Nexus.Services;
 using System;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.Input;
-using Nexus.Models;
-using Nexus.Services;
 
 namespace Nexus.ViewModels.Pages
 {
@@ -37,7 +36,7 @@ namespace Nexus.ViewModels.Pages
         {
             _configService = configService;
             _authService = authService;
-            
+
             _autoStart = CheckAutoStart();
             UnbindCommand = new RelayCommand(OnUnbind);
         }
@@ -68,7 +67,7 @@ namespace Nexus.ViewModels.Pages
                 {
                     var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                         @"Software\Microsoft\Windows\CurrentVersion\Run", true);
-                    
+
                     if (enable)
                     {
                         var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;

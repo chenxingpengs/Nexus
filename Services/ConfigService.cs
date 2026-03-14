@@ -1,8 +1,8 @@
+using Nexus.Models;
 using System;
 using System.IO;
-using System.Text.Json;
 using System.Security.Cryptography;
-using Nexus.Models;
+using System.Text.Json;
 
 namespace Nexus.Services
 {
@@ -12,7 +12,7 @@ namespace Nexus.Services
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Nexus"
         );
-        private static readonly string ConfigFile = Path.Combine(ConfigDir, "config.json");
+        private static readonly string ConfigFile = Path.Combine(ConfigDir, "Nexusc]Config.json");
         private static readonly byte[] Entropy = { 0x4E, 0x65, 0x78, 0x75, 0x73, 0x41, 0x70, 0x70 };
 
         public AppConfig Config { get; private set; }
@@ -33,13 +33,16 @@ namespace Nexus.Services
 
                 var json = File.ReadAllText(ConfigFile);
                 var config = JsonSerializer.Deserialize<AppConfig>(json);
-                
+
                 if (config != null && !string.IsNullOrEmpty(config.AccessToken))
                 {
                     config.AccessToken = DecryptToken(config.AccessToken);
                 }
 
-                return config ?? new AppConfig();
+                var result = config ?? new AppConfig();
+                result.ServerUrl = new AppConfig().ServerUrl;
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -63,8 +66,8 @@ namespace Nexus.Services
                     DeviceName = Config.DeviceName,
                     DeviceType = Config.DeviceType,
                     AppVersion = Config.AppVersion,
-                    AccessToken = !string.IsNullOrEmpty(Config.AccessToken) 
-                        ? EncryptToken(Config.AccessToken) 
+                    AccessToken = !string.IsNullOrEmpty(Config.AccessToken)
+                        ? EncryptToken(Config.AccessToken)
                         : null,
                     TokenExpiresAt = Config.TokenExpiresAt,
                     BindInfo = Config.BindInfo,
@@ -90,7 +93,7 @@ namespace Nexus.Services
             try
             {
                 Config = new AppConfig();
-                
+
                 if (File.Exists(ConfigFile))
                 {
                     File.Delete(ConfigFile);

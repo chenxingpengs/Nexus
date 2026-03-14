@@ -1,12 +1,11 @@
+using Nexus.Models;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Nexus.Models;
 
 namespace Nexus.Services
 {
@@ -119,7 +118,7 @@ namespace Nexus.Services
                 if (CompareVersions(latestVersion, currentVersion) > 0)
                 {
                     var updateInfo = ParseUpdateInfo(release);
-                    
+
                     if (_updateConfig.SkippedVersion == latestVersion)
                     {
                         StatusChanged?.Invoke(UpdateStatus.NoUpdate, "已是最新版本");

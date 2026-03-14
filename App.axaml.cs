@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
@@ -18,7 +17,7 @@ namespace Nexus
     public partial class App : Application
     {
         public static readonly string Version = UpdateService.CurrentVersion;
-        
+
         private ConfigService? _configService;
         private AuthService? _authService;
         private UpdateService? _updateService;
@@ -35,19 +34,19 @@ namespace Nexus
             System.Diagnostics.Debug.WriteLine("========================================");
             System.Diagnostics.Debug.WriteLine($"[Nexus] 应用启动 - 版本 {Version}");
             System.Diagnostics.Debug.WriteLine("========================================");
-            
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 DisableAvaloniaDataAnnotationValidation();
-                
+
                 _configService = new ConfigService();
                 _authService = new AuthService(_configService);
                 _updateService = new UpdateService(_configService);
-                
+
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 配置加载完成: IsBound={_configService.Config.IsBound}");
-                
+
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                
+
                 if (_configService.Config.IsBound)
                 {
                     ShowLoadingWindow(desktop);
@@ -116,7 +115,7 @@ namespace Nexus
             var loadingWindow = CreateLoadingWindow();
             desktop.MainWindow = loadingWindow;
             loadingWindow.Show();
-            
+
             _ = VerifyAndNavigateAsync(desktop, loadingWindow);
         }
 
@@ -127,35 +126,35 @@ namespace Nexus
             {
                 DataContext = _splashViewModel
             };
-            
+
             _splashViewModel.NavigateToMainRequested += () =>
             {
                 ShowBindWindow(desktop, splashScreen);
             };
-            
+
             _splashViewModel.CloseRequested += () =>
             {
                 splashScreen.Close();
                 desktop.Shutdown();
             };
-            
+
             desktop.MainWindow = splashScreen;
         }
 
         private async Task VerifyAndNavigateAsync(IClassicDesktopStyleApplicationLifetime desktop, Window loadingWindow)
         {
             System.Diagnostics.Debug.WriteLine("[Nexus] 开始验证设备...");
-            
+
             var startTime = DateTime.Now;
             var (success, errorMsg) = await _authService!.VerifyDeviceAsync();
             System.Diagnostics.Debug.WriteLine($"[Nexus] 验证结果: success={success}, errorMsg={errorMsg}");
-            
+
             var elapsed = (DateTime.Now - startTime).TotalMilliseconds;
             if (elapsed < 1500)
             {
                 await Task.Delay((int)(1500 - elapsed));
             }
-            
+
             if (success)
             {
                 loadingWindow.Close();
@@ -175,21 +174,21 @@ namespace Nexus
             {
                 DataContext = _splashViewModel
             };
-            
+
             _splashViewModel.SetErrorState(errorMessage);
-            
+
             _splashViewModel.CloseRequested += () =>
             {
                 splashScreen.Close();
                 desktop.Shutdown();
             };
-            
+
             _splashViewModel.RetryRequested += () =>
             {
                 splashScreen.Close();
                 ShowLoadingWindow(desktop);
             };
-            
+
             desktop.MainWindow = splashScreen;
         }
 
@@ -200,7 +199,7 @@ namespace Nexus
             {
                 DataContext = mainWindowViewModel
             };
-            
+
             mainWindowViewModel.BindSuccessAndReady += () =>
             {
                 Dispatcher.UIThread.Post(() =>
@@ -209,7 +208,7 @@ namespace Nexus
                     ShowMainView(desktop, null, true, true);
                 });
             };
-            
+
             mainWindow.Closed += (s, e) =>
             {
                 if (desktop.MainWindow == mainWindow && mainWindowViewModel.BindState != BindState.BindSuccess)
@@ -217,7 +216,7 @@ namespace Nexus
                     desktop.Shutdown();
                 }
             };
-            
+
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
             closeWindow?.Close();
@@ -226,7 +225,7 @@ namespace Nexus
         private void ShowMainView(IClassicDesktopStyleApplicationLifetime desktop, Window? closeWindow, bool registerTray, bool showWindow = true)
         {
             System.Diagnostics.Debug.WriteLine($"[Nexus] ShowMainView: registerTray={registerTray}, showWindow={showWindow}");
-            
+
             var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!);
             var mainView = new MainView
             {
@@ -246,7 +245,7 @@ namespace Nexus
                 System.Diagnostics.Debug.WriteLine("[Nexus] 准备初始化系统托盘...");
                 _trayService = new TrayService();
                 _trayService.Initialize(mainView);
-                
+
                 _trayService.ShowWindowRequested += () =>
                 {
                     Dispatcher.UIThread.Post(() =>
@@ -277,12 +276,12 @@ namespace Nexus
             }
 
             desktop.MainWindow = mainView;
-            
+
             if (showWindow)
             {
                 mainView.Show();
             }
-            
+
             closeWindow?.Close();
         }
 

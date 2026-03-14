@@ -1,10 +1,9 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using Nexus.Models;
 using Nexus.Services;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace Nexus.ViewModels.Pages
 {
@@ -181,7 +180,7 @@ namespace Nexus.ViewModels.Pages
 
             _downloadCts = new CancellationTokenSource();
             var filePath = await _updateService.DownloadUpdateAsync(AvailableUpdate, _downloadCts.Token);
-            
+
             if (!string.IsNullOrEmpty(filePath))
             {
                 _downloadedFilePath = filePath;
