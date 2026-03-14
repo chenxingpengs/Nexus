@@ -226,7 +226,9 @@ namespace Nexus
         {
             System.Diagnostics.Debug.WriteLine($"[Nexus] ShowMainView: registerTray={registerTray}, showWindow={showWindow}");
 
-            var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!);
+            var powerControlService = new PowerControlService();
+            var wolService = new WolService();
+            var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!, powerControlService, wolService);
             var mainView = new MainView
             {
                 DataContext = mainViewModel

@@ -748,18 +748,15 @@ namespace Nexus.ViewModels
         /// </summary>
         private Task<(bool Success, string? Token, string? ErrorMessage)> ParseTokenResponse(string? responseData)
         {
-            // 检查响应是否为空
             if (string.IsNullOrWhiteSpace(responseData))
             {
-                return Task.FromResult((false, (string?)null, "服务器返回空响应"));
+                return Task.FromResult((false, (string?)null, (string?)"服务器返回空响应"));
             }
 
-            // 检查响应是否是 HTML 错误页面（以 < 开头）
             if (responseData.TrimStart().StartsWith("<"))
             {
-                // 尝试提取 HTML 中的错误信息
                 var errorInfo = ExtractErrorFromHtml(responseData);
-                return Task.FromResult((false, (string?)null, $"服务器返回错误页面：{errorInfo}"));
+                return Task.FromResult((false, (string?)null, (string?)$"服务器返回错误页面：{errorInfo}"));
             }
 
             try
@@ -772,7 +769,7 @@ namespace Nexus.ViewModels
                     var msg = root.TryGetProperty("msg", out var msgElement)
                         ? msgElement.GetString()
                         : "获取 token 失败";
-                    return Task.FromResult((false, (string?)null, msg));
+                    return Task.FromResult((false, (string?)null, (string?)msg));
                 }
 
                 if (root.TryGetProperty("data", out var dataElement) &&
@@ -781,17 +778,16 @@ namespace Nexus.ViewModels
                     var token = tokenElement.GetString();
                     if (!string.IsNullOrEmpty(token))
                     {
-                        return Task.FromResult((true, token, (string?)null));
+                        return Task.FromResult((true, (string?)token, (string?)null));
                     }
                 }
 
-                return Task.FromResult((false, (string?)null, "响应中缺少 token 数据"));
+                return Task.FromResult((false, (string?)null, (string?)"响应中缺少 token 数据"));
             }
             catch (JsonException ex)
             {
-                // 如果响应内容较短，显示在错误信息中帮助调试
                 var preview = responseData.Length > 100 ? responseData.Substring(0, 100) + "..." : responseData;
-                return Task.FromResult((false, (string?)null, $"解析响应失败：{ex.Message}\n响应内容：{preview}"));
+                return Task.FromResult((false, (string?)null, (string?)$"解析响应失败：{ex.Message}\n响应内容：{preview}"));
             }
         }
 

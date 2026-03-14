@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Nexus.Views.NotificationWindow"
+        Title=""
+        Height="56"
+        WindowStartupLocation="Manual"
+        ExtendClientAreaToDecorationsHint="True"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        SystemDecorations="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        CanResize="False">
+
+    <Border x:Name="MainBorder"
+            Background="#409EFF"
+            Height="72"
+            ClipToBounds="True">
+        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0">
+            <Border Grid.Column="0"
+                    Background="#1A000000"
+                    Width="80">
+                <TextBlock Text="📢"
+                           FontSize="32"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+            
+            <Canvas Grid.Column="1"
+                    x:Name="ScrollCanvas"
+                    ClipToBounds="True">
+                <TextBlock x:Name="ScrollText"
+                           Canvas.Left="0"
+                           Canvas.Top="20"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           TextTrimming="None"
+                           TextWrapping="NoWrap"/>
+            </Canvas>
+
+            <Border Grid.Column="2"
+                    Background="#1A000000"
+                    Width="60">
+                <Button Content="×"
+                        FontSize="28"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Padding="8"
+                        Click="CloseButton_Click"/>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

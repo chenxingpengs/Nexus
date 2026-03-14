@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Nexus.Models;
 
 namespace Nexus.Services
 {
@@ -50,6 +51,7 @@ namespace Nexus.Services
         public event EventHandler? Reconnected;
         public event EventHandler<ConnectionInfo>? ConnectionInfoChanged;
         public event EventHandler<int>? LatencyUpdated;
+        public event EventHandler<Notification>? NotificationReceived;
 
         public bool IsConnected => _socket?.Connected ?? false;
         public int CurrentLatency => _currentLatency;
@@ -128,10 +130,10 @@ namespace Nexus.Services
                 string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
                 string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
 
-                _currentServerUrl = $"{wsBaseUrl}/desktop/bind";
+                _currentServerUrl = $"{wsBaseUrl}/desktop";
 
                 Debug.WriteLine($"[SocketIO] 基础 URL: {wsBaseUrl}");
-                Debug.WriteLine($"[SocketIO] 命名空间: /desktop/bind");
+                Debug.WriteLine($"[SocketIO] 命名空间: /desktop");
                 Debug.WriteLine($"[SocketIO] Token: {token.Substring(0, Math.Min(20, token.Length))}...");
                 Debug.WriteLine($"[SocketIO] DeviceId: {deviceId}");
                 Debug.WriteLine($"[SocketIO] DeviceType: {deviceType}");
@@ -157,11 +159,11 @@ namespace Nexus.Services
                 Debug.WriteLine($"[SocketIO] 连接 URL: {wsBaseUrl}/desktop/bind");
                 Debug.WriteLine($"[SocketIO] Path: /socket.io");
 
-                _socket = new SocketIOClient.SocketIO($"{wsBaseUrl}/desktop/bind", options);
+                _socket = new SocketIOClient.SocketIO($"{wsBaseUrl}/desktop", options);
 
                 _socket.OnConnected += (sender, e) =>
                 {
-                    Debug.WriteLine("[SocketIO] 已连接到 /desktop/bind 命名空间");
+                    Debug.WriteLine("[SocketIO] 已连接到 /desktop 命名空间");
                     _reconnectAttempts = 0;
                     _connectedAt = DateTime.Now;
                     StartHeartbeat();
@@ -273,6 +275,30 @@ namespace Nexus.Services
                     {
                         Debug.WriteLine($"[SocketIO] 解析 wol_request 失败: {ex.Message}");
                         ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
+                    }
+                });
+
+                _socket.On("notification:push", response =>
+                {
+                    Debug.WriteLine($"[SocketIO] 收到 notification:push: {response}");
+                    try
+                    {
+                        var json = response.GetValue().ToString();
+                        var notification = JsonSerializer.Deserialize<Notification>(json, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+                        
+                        if (notification != null)
+                        {
+                            Debug.WriteLine($"[SocketIO] 通知: {notification.Title} - {notification.Content}");
+                            NotificationReceived?.Invoke(this, notification);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SocketIO] 解析通知失败: {ex.Message}");
+                        ErrorOccurred?.Invoke(this, $"解析通知失败: {ex.Message}");
                     }
                 });
 

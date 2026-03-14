@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using FluentAvalonia.UI.Controls;
+using Nexus.Models;
 using Nexus.Services;
 using Nexus.Views.Pages;
 using System;
@@ -20,6 +21,7 @@ namespace Nexus.ViewModels
         private DispatcherTimer? _updateCheckTimer;
         private readonly PowerControlService _powerControlService;
         private readonly WolService _wolService;
+        private NotificationService? _notificationService;
 
         private object? _currentPage;
         public object? CurrentPage
@@ -62,24 +64,54 @@ namespace Nexus.ViewModels
             set => SetProperty(ref _deviceId, value);
         }
 
+        private bool _notificationVisible;
+        public bool NotificationVisible
+        {
+            get => _notificationVisible;
+            set => SetProperty(ref _notificationVisible, value);
+        }
+
+        private string _notificationTitle = "";
+        public string NotificationTitle
+        {
+            get => _notificationTitle;
+            set => SetProperty(ref _notificationTitle, value);
+        }
+
+        private string _notificationContent = "";
+        public string NotificationContent
+        {
+            get => _notificationContent;
+            set => SetProperty(ref _notificationContent, value);
+        }
+
+        private string _notificationBackgroundColor = "#409EFF";
+        public string NotificationBackgroundColor
+        {
+            get => _notificationBackgroundColor;
+            set => SetProperty(ref _notificationBackgroundColor, value);
+        }
+
+        public string NotificationDisplayText => string.IsNullOrEmpty(NotificationTitle) 
+            ? NotificationContent 
+            : $"{NotificationTitle}：{NotificationContent}";
+
         public ObservableCollection<NavigationItem> NavigationItems { get; }
 
         public ICommand UnbindCommand { get; }
+        public ICommand CloseNotificationCommand { get; }
 
         public event Action? RequestLogout;
 
-        public MainViewModel() : this(new ConfigService(), new AuthService(new ConfigService()), new UpdateService(new ConfigService()), null)
-        {
-        }
-
-        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, SocketIOService? socketIOService = null)
+        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService)
         {
             _configService = configService;
             _authService = authService;
             _updateService = updateService;
-            _powerControlService = new PowerControlService();
+            _powerControlService = powerControlService;
+            _wolService = wolService;
+
             _powerControlService.PowerControlExecuted += OnPowerControlExecuted;
-            _wolService = new WolService();
 
             NavigationItems = new ObservableCollection<NavigationItem>
             {
@@ -90,6 +122,7 @@ namespace Nexus.ViewModels
             };
 
             UnbindCommand = new RelayCommand(OnUnbind);
+            CloseNotificationCommand = new RelayCommand(CloseNotification);
 
             LoadBindInfo();
             _selectedNavigationItem = 0;
@@ -106,6 +139,9 @@ namespace Nexus.ViewModels
             {
                 _socketIOService = new SocketIOService(config.ServerUrl);
                 _socketIOService.MessageReceived += OnSocketMessageReceived;
+                _socketIOService.NotificationReceived += OnNotificationReceived;
+                
+                _notificationService = new NotificationService(_socketIOService);
 
                 var deviceId = config.DeviceId;
                 if (!string.IsNullOrEmpty(deviceId))
@@ -278,6 +314,25 @@ namespace Nexus.ViewModels
         {
             _configService.ClearBindInfo();
             RequestLogout?.Invoke();
+        }
+
+        private void OnNotificationReceived(object? sender, Models.Notification notification)
+        {
+            if (notification.IsExpired)
+            {
+                System.Diagnostics.Debug.WriteLine("[MainViewModel] 收到过期通知，忽略。");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] 收到通知: {notification.Title} - {notification.Content}");
+            
+            _notificationService?.EnqueueNotification(notification);
+        }
+
+        private void CloseNotification()
+        {
+            NotificationVisible = false;
+            _notificationService?.CloseCurrent();
         }
     }
 
