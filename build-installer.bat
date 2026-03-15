@@ -9,7 +9,7 @@ echo.
 set VERSION=1.0.0
 
 echo [1/3] Cleaning old files...
-if exist "bin\Release\net8.0\win-x64\publish" rmdir /s /q "bin\Release\net8.0\win-x64\publish"
+if exist "bin\Release\net8.0-windows\win-x64\publish" rmdir /s /q "bin\Release\net8.0-windows\win-x64\publish"
 if exist "Output" rmdir /s /q "Output"
 
 echo [2/3] Publishing application...

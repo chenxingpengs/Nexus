@@ -98,6 +98,17 @@ namespace Nexus.Services
                     _currentWindow.ShowNotification(notification);
                     
                     Debug.WriteLine($"[NotificationService] 通知窗口已显示: {notification.Title}");
+                    
+                    var speakConfig = notification.Display?.Speak;
+                    if (speakConfig == null || speakConfig.SpeakEnabled)
+                    {
+                        var speakText = string.IsNullOrEmpty(notification.Title) 
+                            ? notification.Content 
+                            : $"{notification.Title}。{notification.Content}";
+                        var voice = speakConfig?.SpeakVoice ?? "xiaoxiao";
+                        var rate = speakConfig?.SpeakRate ?? 0;
+                        TTS.Speak(speakText, voice: voice, rate: rate);
+                    }
                 }
                 catch (Exception ex)
                 {

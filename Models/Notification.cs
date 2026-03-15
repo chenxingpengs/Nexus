@@ -55,6 +55,21 @@ namespace Nexus.Models
         
         [JsonPropertyName("sound")]
         public bool? Sound { get; set; }
+        
+        [JsonPropertyName("speak")]
+        public SpeakConfig? Speak { get; set; }
+    }
+
+    public class SpeakConfig
+    {
+        [JsonPropertyName("speak_enabled")]
+        public bool SpeakEnabled { get; set; } = true;
+        
+        [JsonPropertyName("speak_voice")]
+        public string SpeakVoice { get; set; } = "xiaoxiao";
+        
+        [JsonPropertyName("speak_rate")]
+        public int SpeakRate { get; set; } = 0;
     }
 
     public class Notification
