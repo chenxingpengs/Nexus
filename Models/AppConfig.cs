@@ -12,10 +12,19 @@ namespace Nexus.Models
         public string? AccessToken { get; set; }
         public DateTime? TokenExpiresAt { get; set; }
         public BindInfo? BindInfo { get; set; }
-        public string ServerUrl { get; set; } = "http://localhost:5000";
+        public string ServerUrl { get; set; } = GetDefaultServerUrl();
         public WidgetConfig? WidgetConfig { get; set; }
 
         public bool IsBound => !string.IsNullOrEmpty(AccessToken) && BindInfo != null;
+
+        public static string GetDefaultServerUrl()
+        {
+#if DEBUG
+            return "http://localhost:5000";
+#else
+            return "https://api.hqzx.me";
+#endif
+        }
     }
 
     public class BindInfo
