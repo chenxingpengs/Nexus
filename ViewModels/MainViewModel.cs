@@ -3,6 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using FluentAvalonia.UI.Controls;
 using Nexus.Models;
 using Nexus.Services;
+using Nexus.Services.Widget;
+using Nexus.ViewModels.Pages;
+using Nexus.Views;
 using Nexus.Views.Pages;
 using System;
 using System.Collections.ObjectModel;
@@ -17,11 +20,13 @@ namespace Nexus.ViewModels
         private readonly ConfigService _configService;
         private readonly AuthService _authService;
         private readonly UpdateService _updateService;
+        private readonly ScheduleService _scheduleService;
         private SocketIOService? _socketIOService;
         private DispatcherTimer? _updateCheckTimer;
         private readonly PowerControlService _powerControlService;
         private readonly WolService _wolService;
         private NotificationService? _notificationService;
+        private WidgetService? _widgetService;
 
         private object? _currentPage;
         public object? CurrentPage
@@ -103,21 +108,23 @@ namespace Nexus.ViewModels
 
         public event Action? RequestLogout;
 
-        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService)
+        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService, WidgetService widgetService, ScheduleService scheduleService)
         {
             _configService = configService;
             _authService = authService;
             _updateService = updateService;
             _powerControlService = powerControlService;
             _wolService = wolService;
+            _widgetService = widgetService;
+            _scheduleService = scheduleService;
 
             _powerControlService.PowerControlExecuted += OnPowerControlExecuted;
 
             NavigationItems = new ObservableCollection<NavigationItem>
             {
-                new NavigationItem { Label = "概览", IconSymbol = Symbol.Home, Tag = "Dashboard" },
-                new NavigationItem { Label = "设置", IconSymbol = Symbol.Setting, Tag = "Settings" },
-                new NavigationItem { Label = "系统更新", IconSymbol = Symbol.Sync, Tag = "Update" },
+                new NavigationItem { Label = "考勤配置", IconSymbol = Symbol.Calendar, Tag = "Schedule" },
+                new NavigationItem { Label = "小组件设置", IconSymbol = Symbol.Setting, Tag = "WidgetSettings" },
+                new NavigationItem { Label = "更新", IconSymbol = Symbol.Sync, Tag = "Update" },
                 new NavigationItem { Label = "关于", IconSymbol = Symbol.Help, Tag = "About" }
             };
 
@@ -270,14 +277,64 @@ namespace Nexus.ViewModels
 
         private void NavigateToPage(int index)
         {
-            CurrentPage = index switch
+            switch (index)
             {
-                0 => new DashboardPage(_socketIOService),
-                1 => new SettingsPage(_configService, _authService),
-                2 => new UpdatePage(_updateService),
-                3 => new AboutPage(),
-                _ => new DashboardPage(_socketIOService)
-            };
+                case 0:
+                    var schedulePage = new SettingsPage(_configService, _authService, _scheduleService);
+                    schedulePage.RequestOpenScheduleConfig += OnRequestOpenScheduleConfig;
+                    CurrentPage = schedulePage;
+                    break;
+                case 1:
+                    CurrentPage = new WidgetSettingsPage(new WidgetSettingsViewModel(_configService, _widgetService!));
+                    break;
+                case 2:
+                    CurrentPage = new UpdatePage(_updateService);
+                    break;
+                case 3:
+                    CurrentPage = new AboutPage(_configService, _authService);
+                    break;
+                default:
+                    var defaultSchedulePage = new SettingsPage(_configService, _authService, _scheduleService);
+                    defaultSchedulePage.RequestOpenScheduleConfig += OnRequestOpenScheduleConfig;
+                    CurrentPage = defaultSchedulePage;
+                    break;
+            }
+        }
+
+        private void OnRequestOpenScheduleConfig(int classId, string className)
+        {
+            OpenScheduleConfigWindow(classId, className);
+        }
+
+        private void OpenScheduleConfigWindow(int classId, string className)
+        {
+            Dispatcher.UIThread.Post(async () =>
+            {
+                var viewModel = new ScheduleSetupViewModel(_scheduleService, _configService);
+                var window = new ScheduleSetupWindow
+                {
+                    DataContext = viewModel
+                };
+
+                viewModel.SetupCompleted += () =>
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        window.Close();
+                    });
+                };
+
+                viewModel.RequestSkip += () =>
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        window.Close();
+                    });
+                };
+
+                window.Show();
+                await viewModel.InitializeAsync(classId, className);
+            });
         }
 
         private void StartUpdateCheck()

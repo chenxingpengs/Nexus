@@ -5,9 +5,13 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Nexus.Models.Schedule;
 using Nexus.Services;
+using Nexus.Services.Widget;
 using Nexus.ViewModels;
+using Nexus.ViewModels.Pages;
 using Nexus.Views;
+using Nexus.Views.Pages;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,6 +27,8 @@ namespace Nexus
         private UpdateService? _updateService;
         private TrayService? _trayService;
         private SplashScreenViewModel? _splashViewModel;
+        private WidgetService? _widgetService;
+        private ScheduleService? _scheduleService;
 
         public override void Initialize()
         {
@@ -42,6 +48,7 @@ namespace Nexus
                 _configService = new ConfigService();
                 _authService = new AuthService(_configService);
                 _updateService = new UpdateService(_configService);
+                _scheduleService = new ScheduleService(_configService);
 
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 配置加载完成: IsBound={_configService.Config.IsBound}");
 
@@ -177,6 +184,11 @@ namespace Nexus
 
             _splashViewModel.SetErrorState(errorMessage);
 
+            _splashViewModel.NavigateToMainRequested += () =>
+            {
+                ShowBindWindow(desktop, splashScreen);
+            };
+
             _splashViewModel.CloseRequested += () =>
             {
                 splashScreen.Close();
@@ -190,6 +202,7 @@ namespace Nexus
             };
 
             desktop.MainWindow = splashScreen;
+            splashScreen.Show();
         }
 
         private void ShowBindWindow(IClassicDesktopStyleApplicationLifetime desktop, Window? closeWindow = null)
@@ -200,12 +213,32 @@ namespace Nexus
                 DataContext = mainWindowViewModel
             };
 
-            mainWindowViewModel.BindSuccessAndReady += () =>
+            mainWindowViewModel.BindSuccessAndReady += async () =>
             {
-                Dispatcher.UIThread.Post(() =>
+                await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     mainWindow.Close();
-                    ShowMainView(desktop, null, true, true);
+                    
+                    var classId = _configService?.Config.BindInfo?.ClassId ?? 0;
+                    var className = _configService?.Config.BindInfo?.ClassName ?? "";
+                    
+                    if (classId > 0 && _scheduleService != null)
+                    {
+                        var completeness = await _scheduleService.CheckCompletenessAsync(classId);
+                        
+                        if (completeness != null && !completeness.IsComplete)
+                        {
+                            ShowScheduleSetupWindow(desktop, classId, className);
+                        }
+                        else
+                        {
+                            ShowMainView(desktop, null, true, true);
+                        }
+                    }
+                    else
+                    {
+                        ShowMainView(desktop, null, true, true);
+                    }
                 });
             };
 
@@ -222,13 +255,55 @@ namespace Nexus
             closeWindow?.Close();
         }
 
+        private void ShowScheduleSetupWindow(IClassicDesktopStyleApplicationLifetime desktop, int classId, string className)
+        {
+            var viewModel = new ScheduleSetupViewModel(_scheduleService!, _configService!);
+            var scheduleSetupWindow = new ScheduleSetupWindow
+            {
+                DataContext = viewModel
+            };
+
+            viewModel.SetupCompleted += () =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    scheduleSetupWindow.Close();
+                    ShowMainView(desktop, null, true, true);
+                });
+            };
+
+            viewModel.RequestSkip += () =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    scheduleSetupWindow.Close();
+                    ShowMainView(desktop, null, true, true);
+                });
+            };
+
+            scheduleSetupWindow.Closed += (s, e) =>
+            {
+                if (desktop.MainWindow == scheduleSetupWindow)
+                {
+                    ShowMainView(desktop, null, true, true);
+                }
+            };
+
+            desktop.MainWindow = scheduleSetupWindow;
+            scheduleSetupWindow.Show();
+            
+            _ = viewModel.InitializeAsync(classId, className);
+        }
+
         private void ShowMainView(IClassicDesktopStyleApplicationLifetime desktop, Window? closeWindow, bool registerTray, bool showWindow = true)
         {
             System.Diagnostics.Debug.WriteLine($"[Nexus] ShowMainView: registerTray={registerTray}, showWindow={showWindow}");
 
             var powerControlService = new PowerControlService();
             var wolService = new WolService();
-            var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!, powerControlService, wolService);
+            _widgetService = new WidgetService(_configService!);
+            
+            var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!, powerControlService, wolService, _widgetService, _scheduleService!);
             var mainView = new MainView
             {
                 DataContext = mainViewModel
@@ -238,6 +313,8 @@ namespace Nexus
             {
                 _trayService?.Dispose();
                 _trayService = null;
+                _widgetService?.Stop();
+                _widgetService = null;
                 mainView.Close();
                 ShowSplashScreen(desktop);
             };
@@ -263,6 +340,8 @@ namespace Nexus
                     {
                         _trayService?.Dispose();
                         _trayService = null;
+                        _widgetService?.Stop();
+                        _widgetService = null;
                         desktop.Shutdown();
                     });
                 };
@@ -284,7 +363,25 @@ namespace Nexus
                 mainView.Show();
             }
 
+            _ = InitializeWidgetAsync();
+
             closeWindow?.Close();
+        }
+
+        private async Task InitializeWidgetAsync()
+        {
+            if (_widgetService == null) return;
+
+            await _widgetService.InitializeAsync();
+
+            var widgetConfig = _widgetService.GetConfig();
+            if (widgetConfig.IsEnabled)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _widgetService.ShowWidget();
+                });
+            }
         }
 
         private void DisableAvaloniaDataAnnotationValidation()

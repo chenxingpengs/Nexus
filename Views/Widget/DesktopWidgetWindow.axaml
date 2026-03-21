@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:cards="clr-namespace:Nexus.Views.Widget.Cards"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        x:Class="Nexus.Views.Widget.DesktopWidgetWindow"
+        Title="Nexus Widget"
+        Width="400"
+        SizeToContent="Height"
+        WindowStartupLocation="Manual"
+        SystemDecorations="None"
+        Topmost="False"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        TransparencyLevelHint="AcrylicBlur">
+
+    <Border x:Name="MainBorder"
+            Background="#E6FFFFFF"
+            CornerRadius="16"
+            Padding="12"
+            BorderBrush="#1A000000"
+            BorderThickness="1"
+            BoxShadow="0 8 32 0 #33000000">
+        
+        <Grid RowDefinitions="Auto,*">
+            
+            <Border Grid.Row="0" 
+                    Background="#1976D2" 
+                    CornerRadius="10" 
+                    Padding="12,8"
+                    Margin="0,0,0,12">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Image Source="/Assets/hqzx.png" 
+                               Width="24" 
+                               Height="24"
+                               Stretch="Uniform"/>
+                        <TextBlock Text="珠海市红旗中学" 
+                                   FontSize="14" 
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFFFFF"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <StackPanel Grid.Row="1" Spacing="8" x:Name="CardsContainer">
+                
+                <cards:ShortcutCardView x:Name="ShortcutCard"/>
+                
+                <cards:WeatherCardView x:Name="WeatherCard"/>
+                
+                <cards:AnnouncementCardView x:Name="AnnouncementCard"/>
+                
+                <cards:AttendanceCardView x:Name="AttendanceCard"/>
+                
+            </StackPanel>
+            
+        </Grid>
+    </Border>
+    
+</Window>

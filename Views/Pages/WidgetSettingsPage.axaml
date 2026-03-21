@@ -1,0 +1,210 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Pages"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             x:Class="Nexus.Views.Pages.WidgetSettingsPage"
+             x:DataType="vm:WidgetSettingsViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="24,20" Spacing="24">
+            
+            <TextBlock Text="小组件设置" FontSize="24" FontWeight="Bold" Foreground="#1976D2"/>
+            
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="基础设置" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                    
+                    <Grid ColumnDefinitions="Auto,*" Margin="0,8">
+                        <TextBlock Text="启用桌面小组件" 
+                                   FontSize="14" 
+                                   Foreground="#616161" 
+                                   VerticalAlignment="Center"/>
+                        <ToggleSwitch Grid.Column="1" 
+                                     IsChecked="{Binding IsWidgetEnabled}"
+                                     HorizontalAlignment="Right"/>
+                    </Grid>
+                    
+                    <Grid ColumnDefinitions="Auto,*" Margin="0,8">
+                        <TextBlock Text="透明度" 
+                                   FontSize="14" 
+                                   Foreground="#616161" 
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" 
+                                   Orientation="Horizontal" 
+                                   Spacing="12"
+                                   HorizontalAlignment="Right">
+                            <Slider Minimum="0.3" Maximum="1" 
+                                   Value="{Binding WidgetOpacity}"
+                                   Width="200"/>
+                            <TextBlock Text="{Binding OpacityPercent}" 
+                                       FontSize="14" 
+                                       Foreground="#1976D2"
+                                       VerticalAlignment="Center"
+                                       Width="50"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="天气位置设置" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                    
+                    <Grid ColumnDefinitions="Auto,*" Margin="0,8">
+                        <TextBlock Text="自动定位" 
+                                   FontSize="14" 
+                                   Foreground="#616161" 
+                                   VerticalAlignment="Center"/>
+                        <ToggleSwitch Grid.Column="1" 
+                                     IsChecked="{Binding IsAutoLocationMode}"
+                                     HorizontalAlignment="Right"/>
+                    </Grid>
+                    
+                    <Border Background="#E3F2FD" CornerRadius="8" Padding="12" 
+                           IsVisible="{Binding IsAutoLocationMode}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Map}" FontSize="16" Foreground="#1976D2"/>
+                            <TextBlock FontSize="13" Foreground="#1976D2" VerticalAlignment="Center">
+                                <Run Text="当前定位: "/>
+                                <Run Text="{Binding AutoLocationCity}" FontWeight="Medium"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsManualMode}">
+                        <TextBox Text="{Binding CitySearchText}"
+                                Watermark="搜索城市..."
+                                IsEnabled="{Binding !IsSearching}"
+                                KeyDown="OnSearchTextBoxKeyDown"/>
+                        <Button Grid.Column="1"
+                               Command="{Binding SearchCityCommand}"
+                               IsEnabled="{Binding !IsSearching}"
+                               Margin="8,0,0,0"
+                               CornerRadius="6">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <ui:SymbolIcon Symbol="Find" FontSize="14"/>
+                                <TextBlock Text="搜索" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="12" 
+                           IsVisible="{Binding HasSearchResults}">
+                        <ListBox ItemsSource="{Binding SearchResults}"
+                                SelectedItem="{Binding SelectedCity}"
+                                MaxHeight="200">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding Name}" 
+                                                   FontSize="14" 
+                                                   FontWeight="Medium"/>
+                                        <TextBlock FontSize="12" Foreground="#757575">
+                                            <Run Text="{Binding Province}"/>
+                                            <Run Text=" · "/>
+                                            <Run Text="{Binding CityId}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                    
+                    <Grid ColumnDefinitions="Auto,*" Margin="0,8" 
+                         IsVisible="{Binding HasWeatherLocation}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="当前位置" FontSize="12" Foreground="#9E9E9E"/>
+                            <TextBlock Text="{Binding CurrentCityName}" 
+                                       FontSize="16" 
+                                       FontWeight="Medium"
+                                       Foreground="#1976D2"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" 
+                               Command="{Binding ClearLocationCommand}"
+                               HorizontalAlignment="Right"
+                               Background="#FFEBEE"
+                               CornerRadius="6"
+                               IsVisible="{Binding IsManualMode}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="清除位置" Foreground="#E81123" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    
+                    <TextBlock Text="自动定位模式会根据您的 IP 地址自动获取天气信息" 
+                               FontSize="12" 
+                               Foreground="#9E9E9E"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding IsAutoLocationMode}"/>
+                    
+                    <TextBlock Text="手动模式下，请搜索并选择城市来获取天气信息" 
+                               FontSize="12" 
+                               Foreground="#9E9E9E"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding IsManualMode}"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="卡片管理" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                    
+                    <TextBlock Text="使用上下按钮调整卡片显示顺序" 
+                               FontSize="12" 
+                               Foreground="#9E9E9E"/>
+                    
+                    <ItemsControl ItemsSource="{Binding CardConfigs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#F5F5F5" 
+                                       CornerRadius="8" 
+                                       Padding="12,10"
+                                       Margin="0,0,0,8"
+                                       BorderBrush="#E0E0E0"
+                                       BorderThickness="1">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+                                        <TextBlock Text="{Binding CardIcon}"
+                                                   FontSize="18"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding CardName}"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   Grid.Column="1"/>
+                                        <StackPanel Grid.Column="3" 
+                                                   Orientation="Horizontal" 
+                                                   Spacing="4"
+                                                   VerticalAlignment="Center">
+                                            <Button Width="32" Height="32"
+                                                   Padding="0"
+                                                   CornerRadius="6"
+                                                   Background="#E3F2FD"
+                                                   Command="{Binding $parent[ItemsControl].((vm:WidgetSettingsViewModel)DataContext).MoveCardUpCommand}"
+                                                   CommandParameter="{Binding}">
+                                                <TextBlock Text="▲" FontSize="12" Foreground="#1976D2"/>
+                                            </Button>
+                                            <Button Width="32" Height="32"
+                                                   Padding="0"
+                                                   CornerRadius="6"
+                                                   Background="#E3F2FD"
+                                                   Command="{Binding $parent[ItemsControl].((vm:WidgetSettingsViewModel)DataContext).MoveCardDownCommand}"
+                                                   CommandParameter="{Binding}">
+                                                <TextBlock Text="▼" FontSize="12" Foreground="#1976D2"/>
+                                            </Button>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="4"
+                                                     IsChecked="{Binding IsVisible}"
+                                                     HorizontalAlignment="Right"
+                                                     Margin="8,0,0,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            
+        </StackPanel>
+    </ScrollViewer>
+    
+</UserControl>

@@ -7,7 +7,7 @@ x86/
 [Oo]bj/
 
 # Trae documents
-.trae/documents/
+.trae/
 
 # Visual Studio
 .vs/
@@ -41,3 +41,5 @@ bld/
 
 # Visual Studio cache/options
 .vs/
+
+.gitignore

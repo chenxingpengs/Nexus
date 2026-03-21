@@ -1,4 +1,5 @@
 using System;
+using Nexus.Models.Widget;
 
 namespace Nexus.Models
 {
@@ -12,6 +13,7 @@ namespace Nexus.Models
         public DateTime? TokenExpiresAt { get; set; }
         public BindInfo? BindInfo { get; set; }
         public string ServerUrl { get; set; } = "http://localhost:5000";
+        public WidgetConfig? WidgetConfig { get; set; }
 
         public bool IsBound => !string.IsNullOrEmpty(AccessToken) && BindInfo != null;
     }

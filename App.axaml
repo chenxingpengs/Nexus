@@ -4,11 +4,18 @@
              xmlns:fluent="using:FluentAvalonia.Styling"
              xmlns:local="using:Nexus"
              xmlns:styling="using:FluentAvalonia.Styling"
+             xmlns:converters="using:Nexus.Converters"
              RequestedThemeVariant="Default">
 
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+    
+    <Application.Resources>
+        <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter"/>
+        <converters:BoolToStatusColorConverter x:Key="BoolToStatusColorConverter"/>
+        <converters:MissingToBackgroundConverter x:Key="MissingToBackgroundConverter"/>
+    </Application.Resources>
   
     <Application.Styles>
         <fluent:FluentAvaloniaTheme />

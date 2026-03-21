@@ -1,0 +1,122 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels.Widget"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        x:Class="Nexus.Views.Widget.AttendanceDetailWindow"
+        x:DataType="vm:AttendanceDetailViewModel"
+        Title="考勤详情"
+        Width="500"
+        Height="600"
+        WindowStartupLocation="CenterOwner"
+        CanResize="true"
+        MinWidth="400"
+        MinHeight="500">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+        <!-- 标题栏 -->
+        <Border Grid.Row="0" Background="#F5F5F5" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="20" Foreground="#1976D2"/>
+                    <TextBlock Text="{Binding ClassName}" FontSize="16" FontWeight="Medium" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding TimeSlotName}"
+                           FontSize="14"
+                           Foreground="#757575"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding AttendanceDate}"
+                           FontSize="12"
+                           Foreground="#9E9E9E"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- 内容区域 -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="16">
+                <!-- 统计信息 -->
+                <Border Background="#FFFFFF" CornerRadius="8" Padding="16" BorderBrush="#E0E0E0" BorderThickness="1">
+                    <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto">
+                        <TextBlock Grid.Row="0" Text="应到" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="实到" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="请假" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Row="0" Grid.Column="3" Text="缺勤" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        
+                        <TextBlock Grid.Row="1" Text="{Binding ShouldAttend}" FontSize="24" FontWeight="Bold" Foreground="#1976D2" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ActualAttend}" FontSize="24" FontWeight="Bold" Foreground="#4CAF50" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding LeaveCount}" FontSize="24" FontWeight="Bold" Foreground="#FF9800" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding AbsentCount}" FontSize="24" FontWeight="Bold" Foreground="#F44336" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </Grid>
+                </Border>
+
+                <!-- 请假学生列表 -->
+                <Border Background="#FFF3E0" CornerRadius="8" Padding="12" IsVisible="{Binding HasLeaveStudents}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="请假学生" FontSize="14" FontWeight="Medium" Foreground="#FF9800"/>
+                        <ItemsControl ItemsSource="{Binding LeaveStudents}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFFFFF" CornerRadius="4" Padding="8" Margin="0,0,0,4">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clock}" FontSize="14" Foreground="#FF9800" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding StudentName}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Reason}" FontSize="11" Foreground="#9E9E9E" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 缺勤学生列表 -->
+                <Border Background="#FFEBEE" CornerRadius="8" Padding="12" IsVisible="{Binding HasAbsentStudents}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="缺勤学生" FontSize="14" FontWeight="Medium" Foreground="#F44336"/>
+                        <ItemsControl ItemsSource="{Binding AbsentStudents}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFFFFF" CornerRadius="4" Padding="8" Margin="0,0,0,4">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clear}" FontSize="14" Foreground="#F44336" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding StudentName}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 备注 -->
+                <Border Background="#FFFFFF" CornerRadius="8" Padding="12" BorderBrush="#E0E0E0" BorderThickness="1">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="备注" FontSize="14" FontWeight="Medium" Foreground="#424242"/>
+                        <TextBox Text="{Binding Notes}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="60"
+                                 Watermark="输入备注信息..."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+            <Button Content="取消"
+                    Command="{Binding CancelCommand}"
+                    Width="80"
+                    Background="#E0E0E0"
+                    Foreground="#424242"/>
+            <Button Content="保存"
+                    Command="{Binding SaveCommand}"
+                    Width="80"
+                    Background="#1976D2"
+                    Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</Window>

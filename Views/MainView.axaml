@@ -84,14 +84,14 @@
             </Grid>
         </Border>
         
-        <Border Grid.Row="1" Background="#1976D2" Padding="20,12" BoxShadow="0 2 8 0 #33000000">
+        <Border Grid.Row="1" Background="#1976D2" Padding="20,12" BoxShadow="0 2 8 0 #33000000"
+                PointerPressed="OnTitleBarPointerPressed" Cursor="Arrow">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Border Background="#FFFFFF" CornerRadius="8" Padding="8" Width="36" Height="36">
-                        <TextBlock Text="&#xE80F;" FontSize="16" Foreground="#1976D2" 
-                                   FontFamily="Segoe MDL2 Assets" 
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                        <Image Source="avares://Nexus/Assets/hqzx.png" 
+                               Stretch="UniformToFill"
+                               Width="36" Height="36"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     <StackPanel VerticalAlignment="Center" Spacing="2">
                         <TextBlock Text="Nexus"
                                    FontSize="18"
@@ -147,10 +147,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="14">
                                         <Border Background="#1A1976D2" CornerRadius="6" Width="32" Height="32">
                                             <ui:SymbolIcon Symbol="{Binding IconSymbol}" 
-                                                           FontSize="16" 
-                                                           Foreground="#1976D2"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
+                                               FontSize="16" 
+                                               Foreground="#1976D2"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                         </Border>
                                         <TextBlock Text="{Binding Label}" 
                                                    FontSize="14"
@@ -163,31 +163,6 @@
                         </ListBox>
                     </StackPanel>
                     
-                    <StackPanel DockPanel.Dock="Bottom" Spacing="8">
-                        <Border Height="1" Background="#E0E0E0" Margin="0,8"/>
-                        
-                        <Button Classes="nav-btn"
-                                Command="{Binding UnbindCommand}"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel Orientation="Horizontal" Spacing="14">
-                                <Border Background="#1AE81123" CornerRadius="6" Width="32" Height="32">
-                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Cancel}" 
-                                                   FontSize="16" 
-                                                   Foreground="#E81123"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                </Border>
-                                <TextBlock Text="解绑设备" 
-                                           FontSize="14" 
-                                           FontWeight="Medium"
-                                           Foreground="#E81123" 
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        
-                        <TextBlock Text="v1.0.0" FontSize="10" Foreground="#BDBDBD" 
-                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
-                    </StackPanel>
                 </DockPanel>
             </Border>
             

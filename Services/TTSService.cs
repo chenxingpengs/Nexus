@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Edge_tts_sharp;
 using Edge_tts_sharp.Model;
-using NAudio.Wave;
 
 namespace Nexus.Services
 {
@@ -31,6 +28,7 @@ namespace Nexus.Services
 
         private readonly List<eVoice> _availableVoices;
         private readonly Queue<TTSPlayInfo> _playQueue = new();
+        private readonly object _queueLock = new();
         private CancellationTokenSource? _currentCancellationToken;
         private bool _isPlaying = false;
         private bool _isDisposed = false;
@@ -44,6 +42,7 @@ namespace Nexus.Services
         {
             _availableVoices = Edge_tts.GetVoice();
             Directory.CreateDirectory(CacheFolderPath);
+            Edge_tts.Debug = true;
             Debug.WriteLine($"[TTS] 初始化完成，可用语音数量: {_availableVoices.Count}");
         }
 
@@ -53,10 +52,14 @@ namespace Nexus.Services
                 return;
 
             var voiceName = Voices.TryGetValue(voice, out var v) ? v : "zh-CN-XiaoxiaoNeural";
-            var cachePath = GetCachePath(text, voiceName, rate);
 
-            Debug.WriteLine($"[TTS] 入队朗读: {text}, voice={voiceName}, rate={rate}");
-            _playQueue.Enqueue(new TTSPlayInfo(text, voiceName, rate, volume, cachePath));
+            Debug.WriteLine($"[TTS] 入队朗读: {text.Substring(0, Math.Min(50, text.Length))}..., voice={voiceName}, rate={rate}");
+            
+            lock (_queueLock)
+            {
+                _playQueue.Enqueue(new TTSPlayInfo(text, voiceName, rate, volume));
+            }
+            
             _ = ProcessQueueAsync();
         }
 
@@ -64,43 +67,54 @@ namespace Nexus.Services
         {
             Debug.WriteLine("[TTS] 停止朗读");
             _currentCancellationToken?.Cancel();
-            _playQueue.Clear();
+            lock (_queueLock)
+            {
+                _playQueue.Clear();
+            }
             _isPlaying = false;
-        }
-
-        private string GetCachePath(string text, string voice, int rate)
-        {
-            var data = Encoding.UTF8.GetBytes($"{text}_{voice}_{rate}");
-            var hash = MD5.HashData(data);
-            var hashStr = string.Concat(hash.Select(b => b.ToString("x2")));
-            return Path.Combine(CacheFolderPath, voice, $"{hashStr}.mp3");
         }
 
         private async Task ProcessQueueAsync()
         {
-            if (_isPlaying || _playQueue.Count == 0)
+            if (_isPlaying)
                 return;
+
+            lock (_queueLock)
+            {
+                if (_playQueue.Count == 0)
+                    return;
+            }
 
             _isPlaying = true;
             _currentCancellationToken = new CancellationTokenSource();
 
-            while (_playQueue.Count > 0 && !_currentCancellationToken.Token.IsCancellationRequested)
+            while (true)
             {
-                var info = _playQueue.Dequeue();
+                TTSPlayInfo? info = null;
+                lock (_queueLock)
+                {
+                    if (_playQueue.Count == 0)
+                        break;
+                    info = _playQueue.Dequeue();
+                }
+
+                if (info == null || _currentCancellationToken.Token.IsCancellationRequested)
+                    break;
 
                 try
                 {
-                    if (!File.Exists(info.CachePath))
-                    {
-                        Debug.WriteLine($"[TTS] 生成音频: {info.CachePath}");
-                        await GenerateAudioAsync(info);
-                    }
-
-                    if (File.Exists(info.CachePath) && !_currentCancellationToken.Token.IsCancellationRequested)
-                    {
-                        Debug.WriteLine($"[TTS] 播放音频: {info.CachePath}");
-                        await PlayAudioAsync(info.CachePath, info.Volume);
-                    }
+                    var startTime = DateTime.Now;
+                    Debug.WriteLine($"[TTS] 开始播放: {info.Text.Substring(0, Math.Min(30, info.Text.Length))}...");
+                    
+                    await PlayTextAsync(info);
+                    
+                    var playTime = (DateTime.Now - startTime).TotalMilliseconds;
+                    Debug.WriteLine($"[TTS] 播放完成，耗时: {playTime:F0}ms");
+                }
+                catch (OperationCanceledException)
+                {
+                    Debug.WriteLine($"[TTS] 播放被取消");
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -110,68 +124,53 @@ namespace Nexus.Services
             }
 
             _isPlaying = false;
+            Debug.WriteLine("[TTS] 队列处理完成");
             SpeakCompleted?.Invoke(this, EventArgs.Empty);
         }
 
-        private async Task GenerateAudioAsync(TTSPlayInfo info)
+        private async Task PlayTextAsync(TTSPlayInfo info)
         {
             var voice = _availableVoices.FirstOrDefault(v => v.ShortName == info.VoiceName);
             if (voice == null)
             {
                 voice = _availableVoices.FirstOrDefault(v => v.ShortName == "zh-CN-XiaoxiaoNeural");
+                Debug.WriteLine($"[TTS] 未找到语音 {info.VoiceName}，使用默认语音");
             }
 
-            var directory = Path.GetDirectoryName(info.CachePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            if (voice == null)
             {
-                Directory.CreateDirectory(directory);
+                Debug.WriteLine($"[TTS] 错误：未找到任何可用语音");
+                return;
             }
 
-            var option = new PlayOption
-            {
-                Text = info.Text,
-                Rate = info.Rate,
-                SavePath = info.CachePath
-            };
-
-            await Task.Run(() => Edge_tts.SaveAudio(option, voice));
-        }
-
-        private async Task PlayAudioAsync(string filePath, float volume)
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            
             try
             {
-                var reader = new Mp3FileReader(filePath);
-                var player = new WaveOutEvent();
-                
-                player.Init(reader);
-                player.Volume = volume;
-                
-                player.PlaybackStopped += (s, e) =>
+                var option = new PlayOption
                 {
-                    Debug.WriteLine($"[TTS] 播放结束");
-                    player.Dispose();
-                    reader.Dispose();
-                    tcs.TrySetResult(true);
+                    Text = info.Text,
+                    Rate = info.Rate,
+                    Volume = info.Volume
                 };
+
+                Debug.WriteLine($"[TTS] 直接播放, voice={voice.ShortName}, rate={info.Rate}, volume={info.Volume}");
                 
-                player.Play();
-                Debug.WriteLine($"[TTS] 开始播放: {filePath}");
+                _currentCancellationToken?.Token.ThrowIfCancellationRequested();
                 
-                using var registration = _currentCancellationToken?.Token.Register(() =>
+                await Task.Run(() =>
                 {
-                    player.Stop();
-                    Debug.WriteLine("[TTS] 播放被取消");
-                });
+                    Edge_tts.PlayText(option, voice);
+                }, _currentCancellationToken.Token);
                 
-                await tcs.Task;
+                Debug.WriteLine($"[TTS] 播放完成");
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"[TTS] 播放被取消");
+                throw;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TTS] PlayAudioAsync 异常: {ex.Message}\n{ex.StackTrace}");
-                tcs.TrySetException(ex);
+                Debug.WriteLine($"[TTS] PlayTextAsync 异常: {ex.Message}\n{ex.StackTrace}");
                 throw;
             }
         }
@@ -188,6 +187,6 @@ namespace Nexus.Services
             Stop();
         }
 
-        private record TTSPlayInfo(string Text, string VoiceName, int Rate, float Volume, string CachePath);
+        private record TTSPlayInfo(string Text, string VoiceName, int Rate, float Volume);
     }
 }

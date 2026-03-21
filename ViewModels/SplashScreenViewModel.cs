@@ -48,6 +48,13 @@ namespace Nexus.ViewModels
             set => SetProperty(ref _showStartButton, value);
         }
 
+        private bool _showRetryButton = false;
+        public bool ShowRetryButton
+        {
+            get => _showRetryButton;
+            set => SetProperty(ref _showRetryButton, value);
+        }
+
         public ICommand StartCommand { get; }
         public ICommand CloseCommand { get; }
         public ICommand RetryCommand { get; }
@@ -105,9 +112,10 @@ namespace Nexus.ViewModels
             IsNavigating = false;
             HasError = true;
             ErrorMessage = errorMessage;
-            StatusMessage = "连接失败";
+            StatusMessage = "点击按钮重新绑定";
             ShowCloseButton = true;
-            ShowStartButton = false;
+            ShowStartButton = true;
+            ShowRetryButton = false;
         }
 
         public void SetSuccessState()

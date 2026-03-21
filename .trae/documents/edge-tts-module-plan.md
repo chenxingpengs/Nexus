@@ -1,169 +1,209 @@
 # Edge-TTS 朗读模块实现计划 (C# / Avalonia)
 
 ## 概述
-使用 edge-tts 通过 HTTP API 调用微软 Edge 在线文本转语音服务，在 Nexus 客户端中实现语音朗读功能。
+使用 `Edge_tts_sharp` 库（ClassIsland 同款方案）实现语音朗读功能，集成到 Nexus 客户端。
 
 ## 技术方案
 
 ### 依赖
-- `NagerEdgeTTS`: C# 版 edge-tts 库，通过 HTTP API 调用微软服务
-- `NAudio`: 音频播放库
+- `Edge_tts_sharp`: C# 版 edge-tts 库，通过 WebSocket 调用微软 Edge TTS 服务
+- `NAudio`: 音频播放库（Edge_tts_sharp 依赖）
 
 ### 核心功能
 1. 文本转语音（TTS）
 2. 多种中文语音选择
 3. 语速、音量调节
 4. 异步播放
-5. 缓存管理
+5. 本地缓存
+6. 队列管理
 
 ## 实现步骤
 
 ### 步骤 1: 安装 NuGet 包
 ```bash
-dotnet add package NagerEdgeTTS
+dotnet add package Edge_tts_sharp
 ```
 
 ### 步骤 2: 创建 TTS 服务模块
 **文件**: `Services/TTSService.cs`
 
 ```csharp
-using NagerEdgeTTS;
-using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Diagnostics;
+using Edge_tts_sharp;
+using Edge_tts_sharp.Model;
+using NAudio.Wave;
 
 namespace Nexus.Services
 {
     public class TTSService : IDisposable
     {
-        private readonly NagerEdgeTTS.EdgeTTS _tts;
-        private readonly IWavePlayer? _wavePlayer;
+        public static readonly string CacheFolderPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Nexus", "TTSCache");
+
+        public static readonly Dictionary<string, string> Voices = new()
+        {
+            { "xiaoxiao", "zh-CN-XiaoxiaoNeural" },
+            { "yunyang", "zh-CN-YunyangNeural" },
+            { "xiaoyi", "zh-CN-XiaoyiNeural" },
+            { "yunjian", "zh-CN-YunjianNeural" },
+            { "yunxi", "zh-CN-YunxiNeural" },
+            { "xiaoxuan", "zh-CN-XiaoxuanNeural" }
+        };
+
+        private readonly List<eVoice> _availableVoices;
+        private readonly Queue<TTSPlayInfo> _playQueue = new();
+        private CancellationTokenSource? _currentCancellationToken;
         private bool _isPlaying = false;
         private bool _isDisposed = false;
 
-        // 预设中文语音
-        public static readonly Dictionary<string, (string Name, string DisplayName, string Description)> Voices = new()
-        {
-            { "xiaoxiao", ("zh-CN-XiaoxiaoNeural", "晓晓", "女声，自然亲切") },
-            { "yunyang", ("zh-CN-YunyangNeural", "云扬", "男声，新闻播报风格") },
-            { "xiaoyi", ("zh-CN-XiaoyiNeural", "晓伊", "女声，温柔甜美") },
-            { "yunjian", ("zh-CN-YunjianNeural", "云健", "男声，沉稳大气") },
-            { "xiaoxuan", ("zh-CN-XiaoxuanNeural", "晓萱", "女声，客服风格") }
-        };
-
-        public event EventHandler<string>? SpeakCompleted;
+        public event EventHandler? SpeakCompleted;
         public event EventHandler<Exception>? ErrorOccurred;
 
         public bool IsPlaying => _isPlaying;
 
         public TTSService()
         {
-            _tts = new EdgeTTS();
+            _availableVoices = Edge_tts.GetVoice();
+            Directory.CreateDirectory(CacheFolderPath);
         }
 
-        /// <summary>
-        /// 朗读文本
-        /// </summary>
-        /// <param name="text">要朗读的文本</param>
-        /// <param name="voice">语音名称：xiaoxiao, yunyang, xiaoyi, yunjian, xiaoxuan</param>
-        /// <param name="rate">语速：-100 到 100</param>
-        /// <param name="volume">音量：0 到 100</param>
-        public async Task SpeakAsync(string text, string voice = "xiaoxiao", int rate = 0, int volume = 100)
+        public void Speak(string text, string voice = "xiaoxiao", int rate = 0, float volume = 1.0f)
         {
-            if (_isDisposed)
-            {
-                throw new ObjectDisposedException(nameof(TTSService));
-            }
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
+            if (_isDisposed || string.IsNullOrWhiteSpace(text))
                 return;
-            }
 
-            try
-            {
-                _isPlaying = true;
+            var voiceName = Voices.TryGetValue(voice, out var v) ? v : "zh-CN-XiaoxiaoNeural";
+            var cachePath = GetCachePath(text, voiceName, rate);
 
-                var voiceInfo = Voices.TryGetValue(voice, out var v) ? v.Name : "zh-CN-XiaoxiaoNeural";
-                var rateStr = rate >= 0 ? $"+{rate}%" : $"{rate}%";
-
-                Debug.WriteLine($"[TTS] 开始朗读: {text}, voice={voiceInfo}, rate={rateStr}");
-
-                // 使用 NagerEdgeTTS 生成音频
-                var audioData = await _tts.SynthesizeAsync(text, voiceInfo, rateStr);
-
-                // 使用 NAudio 播放
-                using var stream = new MemoryStream(audioData);
-                using var reader = new Mp3FileReader(stream);
-                
-                _wavePlayer = new WaveOutEvent();
-                _wavePlayer.Init(reader);
-                _wavePlayer.PlaybackStopped += (s, e) =>
-                {
-                    _isPlaying = false;
-                    SpeakCompleted?.Invoke(this, voice);
-                };
-
-                _wavePlayer.Play();
-
-                Debug.WriteLine($"[TTS] 播放完成");
-            }
-            catch (Exception ex)
-            {
-                _isPlaying = false;
-                Debug.WriteLine($"[TTS] 播放失败: {ex.Message}");
-                ErrorOccurred?.Invoke(this, ex);
-            }
+            _playQueue.Enqueue(new TTSPlayInfo(text, voiceName, rate, volume, cachePath));
+            _ = ProcessQueueAsync();
         }
 
-        /// <summary>
-        /// 停止朗读
-        /// </summary>
         public void Stop()
         {
-            if (_wavePlayer != null && _isPlaying)
-            {
-                _wavePlayer.Stop();
-                _isPlaying = false;
-            }
-        }
-
-        /// <summary>
-        /// 获取可用语音列表
-        /// </summary>
-        public static List<(string Key, string Name, string Description)> GetAvailableVoices()
-        {
-            return Voices.Select(v => (v.Key, v.Value.Name, v.Value.Description)).ToList();
-        }
-
-        public void Dispose()
-        {
-            if (_isDisposed) return;
-            _isDisposed = true;
-            
-            _wavePlayer?.Stop();
-            _wavePlayer?.Dispose();
+            _currentCancellationToken?.Cancel();
+            _playQueue.Clear();
             _isPlaying = false;
         }
+
+        private string GetCachePath(string text, string voice, int rate)
+        {
+                var data = Encoding.UTF8.GetBytes($"{text}_{voice}_{rate}");
+                var hash = MD5.HashData(data);
+                var hashStr = string.Concat(hash.Select(b => b.ToString("x2")));
+                return Path.Combine(CacheFolderPath, voice, $"{hashStr}.mp3");
+            }
+
+        private async Task ProcessQueueAsync()
+            {
+                if (_isPlaying || _playQueue.Count == 0)
+                    return;
+
+                _isPlaying = true;
+                _currentCancellationToken = new CancellationTokenSource();
+
+                while (_playQueue.Count > 0 && !_currentCancellationToken.Token.IsCancellationRequested)
+                {
+                    var info = _playQueue.Dequeue();
+
+                    try
+                    {
+                        if (!File.Exists(info.CachePath))
+                        {
+                            await GenerateAudioAsync(info);
+                        }
+
+                        if (File.Exists(info.CachePath) && !_currentCancellationToken.Token.IsCancellationRequested)
+                        {
+                            await PlayAudioAsync(info.CachePath, info.Volume);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorOccurred?.Invoke(this, ex);
+                    }
+                }
+
+                _isPlaying = false;
+                SpeakCompleted?.Invoke(this, EventArgs.Empty);
+            }
+
+        private async Task GenerateAudioAsync(TTSPlayInfo info)
+            {
+                var voice = _availableVoices.FirstOrDefault(v => v.ShortName == info.VoiceName);
+                if (voice == null)
+                {
+                    voice = _availableVoices.FirstOrDefault(v => v.ShortName == "zh-CN-XiaoxiaoNeural");
+                }
+
+                var directory = Path.GetDirectoryName(info.CachePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                var option = new PlayOption
+                {
+                    Text = info.Text,
+                    Rate = info.Rate,
+                    SavePath = info.CachePath
+                };
+
+                await Task.Run(() => Edge_tts.SaveAudio(option, voice));
+            }
+
+        private async Task PlayAudioAsync(string filePath, float volume)
+            {
+                await using var reader = new Mp3FileReader(filePath);
+                using var player = new WaveOutEvent();
+                player.Init(reader);
+                player.Volume = volume;
+                player.Play();
+
+                while (player.PlaybackState == PlaybackState.Playing)
+                {
+                    if (_currentCancellationToken?.Token.IsCancellationRequested == true)
+                    {
+                        player.Stop();
+                        break;
+                    }
+                    await Task.Delay(100);
+                }
+            }
+
+        public static List<(string Key, string Name)> GetAvailableVoices()
+            {
+                return Voices.Select(v => (v.Key, v.Value)).ToList();
+            }
+
+        public void Dispose()
+            {
+                if (_isDisposed) return;
+                _isDisposed = true;
+                Stop();
+            }
+
+        private record TTSPlayInfo(string Text, string VoiceName, int Rate, float Volume, string CachePath);
     }
 }
 ```
 
 ### 步骤 3: 创建便捷调用类
-**文件**: `Services/TTSHelper.cs`
+**文件**: `Services/TTS.cs`
 
 ```csharp
 using System;
-using System.Threading.Tasks;
 
 namespace Nexus.Services
 {
-    /// <summary>
-    /// TTS 便捷调用类 - 静态方法快速调用
-    /// </summary>
     public static class TTS
     {
         private static TTSService? _instance;
@@ -177,27 +217,18 @@ namespace Nexus.Services
                 {
                     lock (_lock)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new TTSService();
-                        }
+                        _instance ??= new TTSService();
                     }
                 }
                 return _instance;
             }
         }
 
-        /// <summary>
-        /// 快速朗读文本
-        /// </summary>
-        public static async Task SpeakAsync(string text, string voice = "xiaoxiao", int rate = 0)
+        public static void Speak(string text, string voice = "xiaoxiao", int rate = 0, float volume = 1.0f)
         {
-            await Instance.SpeakAsync(text, voice, rate);
+            Instance.Speak(text, voice, rate, volume);
         }
 
-        /// <summary>
-        /// 停止朗读
-        /// </summary>
         public static void Stop()
         {
             Instance.Stop();
@@ -209,42 +240,27 @@ namespace Nexus.Services
 ### 步骤 4: 集成到通知系统
 在 `NotificationService.cs` 中添加 TTS 支持：
 
-```csharp
-// 收到通知时朗读
-private void OnNotificationReceived(object? sender, Models.Notification notification)
-{
-    // ... 现有代码 ...
-    
-    // 朗读通知内容
-    _ = TTSService.Instance.SpeakAsync(
-        $"{notification.Title}：{notification.Content}",
-        voice: "xiaoxiao"
-    );
-}
-```
-
 ## 文件结构
 
 ```
 Nexus/
 ├── Services/
-│   ├── TTSService.cs      # TTS 服务
-│   ├── TTSHelper.cs        # 便捷调用
+│   ├── TTSService.cs          # TTS 服务
+│   ├── TTS.cs                  # 便捷调用
 │   └── NotificationService.cs  # 修改：添加 TTS 调用
-└── Nexus.csproj            # 添加 NagerEdgeTTS, NAudio 包引用
+└── Nexus.csproj                # 添加 Edge_tts_sharp 包引用
 ```
 
 ## 使用示例
 
 ```csharp
-// 方式1: 使用 TTSService
-var tts = new TTSService();
-await tts.SpeakAsync("欢迎使用校园考勤系统", voice: "xiaoxiao", rate: 20);
+// 快速朗读
+TTS.Speak("欢迎使用校园考勤系统");
 
-// 方式2: 使用静态便捷方法
-await TTS.SpeakAsync("通知：请按时打卡", voice: "yunyang");
+// 指定语音和语速
+TTS.Speak("通知：请按时打卡", voice: "yunyang", rate: 20);
 
-// 方式3: 停止朗读
+// 停止朗读
 TTS.Stop();
 ```
 
@@ -256,11 +272,12 @@ TTS.Stop();
 | yunyang | 云扬 | 男声，新闻播报风格 |
 | xiaoyi | 晓伊 | 女声，温柔甜美 |
 | yunjian | 云健 | 男声，沉稳大气 |
+| yunxi | 云希 | 女声，温柔自然 |
 | xiaoxuan | 晓萱 | 女声，客服风格 |
 
 ## 注意事项
 
-1. **网络依赖**: edge-tts 需要网络连接
-2. **异步处理**: 所有方法都是异步的
+1. **网络依赖**: 首次生成音频需要网络连接
+2. **缓存机制**: 音频文件会缓存到本地，避免重复生成
 3. **资源释放**: 使用完毕后调用 Dispose() 释放资源
-4. **错误处理**: 通过事件订阅错误
+4. **队列播放**: 支持多条文本排队朗读

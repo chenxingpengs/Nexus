@@ -1,4 +1,5 @@
 using Nexus.Models;
+using Nexus.Models.Widget;
 using System;
 using System.IO;
 using System.Security.Cryptography;
@@ -12,7 +13,7 @@ namespace Nexus.Services
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Nexus"
         );
-        private static readonly string ConfigFile = Path.Combine(ConfigDir, "Nexusc]Config.json");
+        private static readonly string ConfigFile = Path.Combine(ConfigDir, "NexusConfig.json");
         private static readonly byte[] Entropy = { 0x4E, 0x65, 0x78, 0x75, 0x73, 0x41, 0x70, 0x70 };
 
         public AppConfig Config { get; private set; }
@@ -26,12 +27,17 @@ namespace Nexus.Services
         {
             try
             {
+                Console.WriteLine($"[ConfigService] LoadConfig 开始, 配置文件路径: {ConfigFile}");
+                
                 if (!File.Exists(ConfigFile))
                 {
+                    Console.WriteLine("[ConfigService] 配置文件不存在，返回默认配置");
                     return new AppConfig();
                 }
 
                 var json = File.ReadAllText(ConfigFile);
+                Console.WriteLine($"[ConfigService] 配置文件内容: {json}");
+                
                 var config = JsonSerializer.Deserialize<AppConfig>(json);
 
                 if (config != null && !string.IsNullOrEmpty(config.AccessToken))
@@ -40,13 +46,15 @@ namespace Nexus.Services
                 }
 
                 var result = config ?? new AppConfig();
-                result.ServerUrl = new AppConfig().ServerUrl;
+                Console.WriteLine($"[ConfigService] 加载后 ServerUrl: {result.ServerUrl}");
+                Console.WriteLine($"[ConfigService] 加载后 BindInfo: {(result.BindInfo != null ? $"ClassId={result.BindInfo.ClassId}, ClassName={result.BindInfo.ClassName}" : "null")}");
+                Console.WriteLine($"[ConfigService] 加载后 IsBound: {result.IsBound}");
 
                 return result;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadConfig error: {ex.Message}");
+                Console.WriteLine($"LoadConfig error: {ex.Message}");
                 return new AppConfig();
             }
         }
@@ -71,7 +79,8 @@ namespace Nexus.Services
                         : null,
                     TokenExpiresAt = Config.TokenExpiresAt,
                     BindInfo = Config.BindInfo,
-                    ServerUrl = Config.ServerUrl
+                    ServerUrl = Config.ServerUrl,
+                    WidgetConfig = Config.WidgetConfig
                 };
 
                 var json = JsonSerializer.Serialize(configToSave, new JsonSerializerOptions
@@ -107,6 +116,8 @@ namespace Nexus.Services
 
         public void UpdateBindInfo(int classId, string className, string accessToken, DateTime? expiresAt = null)
         {
+            Console.WriteLine($"[ConfigService] UpdateBindInfo 被调用: classId={classId}, className={className}, accessToken={(string.IsNullOrEmpty(accessToken) ? "空" : "存在")}, expiresAt={expiresAt}");
+            
             Config.BindInfo = new BindInfo
             {
                 ClassId = classId,
@@ -115,7 +126,12 @@ namespace Nexus.Services
             };
             Config.AccessToken = accessToken;
             Config.TokenExpiresAt = expiresAt ?? DateTime.Now.AddDays(30);
+            
+            Console.WriteLine($"[ConfigService] BindInfo 已设置: ClassId={Config.BindInfo.ClassId}, ClassName={Config.BindInfo.ClassName}");
+            
             SaveConfig();
+            
+            Console.WriteLine($"[ConfigService] SaveConfig 已调用");
         }
 
         public void ClearBindInfo()
@@ -155,6 +171,78 @@ namespace Nexus.Services
             var encryptedBytes = Convert.FromBase64String(encryptedToken);
             var plainBytes = ProtectedData.Unprotect(encryptedBytes, Entropy, DataProtectionScope.CurrentUser);
             return System.Text.Encoding.UTF8.GetString(plainBytes);
+        }
+
+        public WidgetConfig GetWidgetConfig()
+        {
+            if (Config.WidgetConfig == null)
+            {
+                Config.WidgetConfig = WidgetConfig.CreateDefault();
+                SaveConfig();
+            }
+            return Config.WidgetConfig;
+        }
+
+        public void UpdateWidgetConfig(WidgetConfig config)
+        {
+            Config.WidgetConfig = config;
+            SaveConfig();
+        }
+
+        public void UpdateWidgetEnabled(bool isEnabled)
+        {
+            GetWidgetConfig().IsEnabled = isEnabled;
+            SaveConfig();
+        }
+
+        public void UpdateWidgetOpacity(double opacity)
+        {
+            GetWidgetConfig().Opacity = opacity;
+            SaveConfig();
+        }
+
+        public void UpdateWeatherLocation(string cityId, string cityName, string province)
+        {
+            var widgetConfig = GetWidgetConfig();
+            widgetConfig.WeatherLocation = new WeatherLocationConfig
+            {
+                CityId = cityId,
+                CityName = cityName,
+                Province = province
+            };
+            SaveConfig();
+        }
+
+        public void ClearWeatherLocation()
+        {
+            GetWidgetConfig().WeatherLocation = null;
+            SaveConfig();
+        }
+
+        public void UpdateLocationMode(LocationMode mode)
+        {
+            GetWidgetConfig().LocationMode = mode;
+            SaveConfig();
+        }
+
+        public LocationMode GetLocationMode()
+        {
+            return GetWidgetConfig().LocationMode;
+        }
+
+        public int GetClassId()
+        {
+            return Config.BindInfo?.ClassId ?? 0;
+        }
+
+        public string? GetServerUrl()
+        {
+            return Config.ServerUrl;
+        }
+
+        public string? GetAccessToken()
+        {
+            return Config.AccessToken;
         }
     }
 }

@@ -68,6 +68,8 @@ namespace Nexus.Services
                     PropertyNameCaseInsensitive = true
                 });
 
+                Console.WriteLine($"[AuthService] 反序列化结果: Code={result?.Code}, Data={(result?.Data != null ? $"Bound={result.Data.Bound}, ClassId={result.Data.ClassId}, ClassName={result.Data.ClassName}" : "null")}");
+
                 if (result == null || result.Code != 200)
                 {
                     return (false, result?.Msg ?? "验证失败");
@@ -75,8 +77,11 @@ namespace Nexus.Services
 
                 if (result.Data == null || !result.Data.Bound)
                 {
-                    return (false, "设备未绑定");
+                    Console.WriteLine($"[AuthService] 设备未绑定: Data={(result.Data != null ? "存在" : "null")}, Bound={result.Data?.Bound}");
+                    return (false, "设备绑定信息失效");
                 }
+
+                Console.WriteLine($"[AuthService] 准备更新绑定信息: ClassId={result.Data.ClassId}, ClassName={result.Data.ClassName}, AccessToken={(string.IsNullOrEmpty(result.Data.AccessToken) ? "空" : "存在")}");
 
                 _configService.UpdateBindInfo(
                     result.Data.ClassId,
@@ -84,6 +89,8 @@ namespace Nexus.Services
                     result.Data.AccessToken ?? config.AccessToken ?? "",
                     result.Data.TokenExpiresAt
                 );
+
+                Console.WriteLine($"[AuthService] 绑定信息已更新，当前配置: BindInfo={(_configService.Config.BindInfo != null ? $"ClassId={_configService.Config.BindInfo.ClassId}" : "null")}");
 
                 if (!string.IsNullOrEmpty(result.Data.DeviceType))
                 {
@@ -197,18 +204,34 @@ namespace Nexus.Services
 
     public class VerifyResponse
     {
+        [System.Text.Json.Serialization.JsonPropertyName("code")]
         public int Code { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("msg")]
         public string Msg { get; set; } = string.Empty;
+        
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
         public VerifyData? Data { get; set; }
     }
 
     public class VerifyData
     {
+        [System.Text.Json.Serialization.JsonPropertyName("bound")]
         public bool Bound { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("device_type")]
         public string? DeviceType { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("class_id")]
         public int ClassId { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("class_name")]
         public string? ClassName { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("access_token")]
         public string? AccessToken { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("token_expires_at")]
         public DateTime? TokenExpiresAt { get; set; }
     }
 

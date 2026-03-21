@@ -1,10 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             x:Class="Nexus.Views.Pages.AboutPage">
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Pages"
+             x:Class="Nexus.Views.Pages.AboutPage"
+             x:DataType="vm:AboutViewModel">
 
     <ScrollViewer>
-        <StackPanel Spacing="20" Margin="0,0,0,32" HorizontalAlignment="Center" MaxWidth="500">
+        <StackPanel Spacing="20" Margin="0,0,0,32">
             
             <StackPanel HorizontalAlignment="Center" Margin="0,24,0,0">
                 <Border Background="#FFFFFF" CornerRadius="16" Width="100" Height="100" Padding="8"
@@ -27,60 +29,77 @@
             </StackPanel>
 
             <Border Background="#F5F5F5" CornerRadius="8" Padding="12,6" HorizontalAlignment="Center">
-                <TextBlock Text="版本 1.0.0"
+                <TextBlock Text="{Binding VersionText}"
                            FontSize="13"
                            HorizontalAlignment="Center"
-                           Foreground="#9E9E9E"
-                           x:Name="VersionText"/>
+                           Foreground="#9E9E9E"/>
             </Border>
 
             <Border Background="#FFFFFF" CornerRadius="12" Padding="24" 
-                    BoxShadow="0 2 8 0 #1A000000" Margin="0,8,0,0">
+                    BoxShadow="0 2 8 0 #1A000000" Margin="16,8,16,0">
                 <StackPanel Spacing="16">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <Border Background="#E3F2FD" CornerRadius="8" Padding="8">
-                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Contact}" FontSize="18" Foreground="#1976D2"/>
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Video}" FontSize="18" Foreground="#1976D2"/>
                         </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="技术支持" FontSize="12" Foreground="#9E9E9E"/>
-                            <TextBlock Text="珠海市红旗中学信息中心" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
-                        </StackPanel>
-                    </StackPanel>
-                    
-                    <Border Height="1" Background="#E0E0E0"/>
-                    
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Border Background="#E8F5E9" CornerRadius="8" Padding="8">
-                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Globe}" FontSize="18" Foreground="#4CAF50"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="官方网站" FontSize="12" Foreground="#9E9E9E"/>
-                            <TextBlock Text="https://hqzx.me" 
-                                       FontSize="14"
-                                       Foreground="#1976D2"
-                                       FontWeight="Medium"
-                                       Cursor="Hand"/>
+                        <StackPanel VerticalAlignment="Center" Spacing="4">
+                            <TextBlock Text="设备信息" FontSize="12" Foreground="#9E9E9E"/>
+                            <TextBlock Text="{Binding DeviceName}" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
+                            <TextBlock Text="{Binding DeviceId}" FontSize="11" Foreground="#9E9E9E" FontFamily="Consolas"/>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,8,0,0">
-                <Button HorizontalAlignment="Center" CornerRadius="8" Padding="16,10"
-                        Background="#1976D2" Foreground="#FFFFFF">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Sync}" FontSize="16"/>
-                        <TextBlock Text="检查更新" FontWeight="Medium"/>
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24" 
+                    BoxShadow="0 2 8 0 #1A000000" Margin="16,0,16,0"
+                    IsVisible="{Binding IsBound}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#FFEBEE" CornerRadius="8" Padding="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Delete}" FontSize="18" Foreground="#E53935"/>
+                        </Border>
+                        <TextBlock Text="设备管理" FontSize="16" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
                     </StackPanel>
-                </Button>
-                <Button HorizontalAlignment="Center" CornerRadius="8" Padding="16,10"
-                        Background="#F5F5F5" Foreground="#424242">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Document}" FontSize="16"/>
-                        <TextBlock Text="查看日志" FontWeight="Medium"/>
+                    
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="解绑设备" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
+                                <TextBlock Text="解除设备与班级的绑定关系" FontSize="12" Foreground="#9E9E9E"/>
+                            </StackPanel>
+                            <Button Grid.Row="0" Grid.Column="1"
+                                    Command="{Binding UnbindCommand}"
+                                    Background="#E53935"
+                                    CornerRadius="8"
+                                    Padding="16,8"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="解绑" Foreground="White" FontSize="13"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24" 
+                    BoxShadow="0 2 8 0 #1A000000" Margin="16,0,16,0">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#E3F2FD" CornerRadius="8" Padding="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Contact}" FontSize="18" Foreground="#1976D2"/>
+                        </Border>
+                        <TextBlock Text="技术支持" FontSize="16" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
                     </StackPanel>
-                </Button>
-            </StackPanel>
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="珠海市红旗中学信息中心" FontSize="14" Foreground="#424242"/>
+                        <TextBlock Text="https://hqzx.me" 
+                                   FontSize="13"
+                                   Foreground="#1976D2"
+                                   Cursor="Hand"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
 
             <TextBlock Text="© 2024 珠海市红旗中学. All rights reserved."
                        FontSize="12"

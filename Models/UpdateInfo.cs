@@ -51,7 +51,7 @@ namespace Nexus.Models
 
     public class UpdateConfig
     {
-        public string GitHubOwner { get; set; } = "your-github-username";
+        public string GitHubOwner { get; set; } = "chenxingpengs";
         public string GitHubRepo { get; set; } = "Nexus";
         public bool AutoCheckOnStartup { get; set; } = true;
         public int CheckIntervalHours { get; set; } = 4;

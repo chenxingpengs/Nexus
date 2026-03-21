@@ -1,0 +1,201 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Pages"
+             xmlns:models="clr-namespace:Nexus.Models.Schedule"
+             x:Class="Nexus.Views.Pages.ScheduleSetupPage"
+             x:DataType="vm:ScheduleSetupViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        
+        <Border Grid.Row="0" Background="#FFFFFF" Padding="24,16" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="排班配置" FontSize="24" FontWeight="Bold" Foreground="#1976D2"/>
+                    <TextBlock FontSize="13" Foreground="#757575">
+                        <Run Text="班级: "/>
+                        <Run Text="{Binding ClassName}" FontWeight="Medium" Foreground="#424242"/>
+                        <Run Text=" | 已配置: "/>
+                        <Run Text="{Binding ConfiguredCount}" FontWeight="Medium" Foreground="#4CAF50"/>
+                        <Run Text=" / "/>
+                        <Run Text="{Binding TotalCount}" FontWeight="Medium"/>
+                    </TextBlock>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button Command="{Binding RefreshCommand}"
+                            Background="#F5F5F5" CornerRadius="8" Padding="12,8">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Refresh}" FontSize="16" Foreground="#616161"/>
+                            <TextBlock Text="刷新" Foreground="#616161"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" Background="#FAFAFA">
+            <StackPanel Spacing="16" Margin="24">
+                
+                <Border Background="#FFF8E1" CornerRadius="8" Padding="16" IsVisible="{Binding HasMissingSlots}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="20" Foreground="#FF9800"/>
+                        <TextBlock Text="检测到以下时段需要配置周期排班，请完善配置后点击保存" 
+                                   FontSize="14" Foreground="#E65100" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#E8F5E9" CornerRadius="8" Padding="16" IsVisible="{Binding IsComplete}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="20" Foreground="#4CAF50"/>
+                        <TextBlock Text="排班配置完整，所有固定时段已配置完成" 
+                                   FontSize="14" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFFFFF" CornerRadius="8" Padding="16" BoxShadow="0 1 4 0 #1A000000">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="老师搜索" FontSize="14" FontWeight="SemiBold" Foreground="#424242"/>
+                        <TextBox Text="{Binding TeacherSearchText}"
+                                 Watermark="输入老师姓名搜索..."
+                                 HorizontalAlignment="Stretch"
+                                 Padding="12,8"
+                                 CornerRadius="6"/>
+                        <TextBlock FontSize="12" Foreground="#757575">
+                            <Run Text="共 "/>
+                            <Run Text="{Binding Teachers.Count}"/>
+                            <Run Text=" 位老师，筛选后 "/>
+                            <Run Text="{Binding FilteredTeachers.Count}"/>
+                            <Run Text=" 位"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding TimeSlotItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:TimeSlotScheduleItem">
+                            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" Margin="0,0,0,12"
+                                    BoxShadow="0 2 8 0 #1A000000">
+                                <StackPanel Spacing="16">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Background="#E3F2FD" CornerRadius="6" Padding="8">
+                                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clock}" FontSize="18" Foreground="#1976D2"/>
+                                        </Border>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TimeSlot.Name}" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                                            <TextBlock FontSize="12" Foreground="#757575">
+                                                <Run Text="{Binding TimeSlot.StartTime}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding TimeSlot.EndTime}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <Border Background="#F5F5F5" CornerRadius="8" Padding="12">
+                                        <ItemsControl ItemsSource="{Binding WeekdayItems}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Spacing="8"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:WeekdayScheduleItem">
+                                                    <Grid ColumnDefinitions="80,*,Auto,40" Margin="0,4">
+                                                        <TextBlock Grid.Column="0" 
+                                                                   Text="{Binding WeekdayName}"
+                                                                   FontSize="13"
+                                                                   Foreground="#616161"
+                                                                   VerticalAlignment="Center"/>
+
+                                                        <Border Grid.Column="1" 
+                                                                Background="#FFFFFF"
+                                                                CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                                                            <ComboBox ItemsSource="{Binding FilteredTeachers}"
+                                                                      SelectedValue="{Binding SelectedTeacherId}"
+                                                                      SelectedValueBinding="{Binding Id}"
+                                                                      DisplayMemberBinding="{Binding DisplayName}"
+                                                                      IsEnabled="{Binding IsMissing}"
+                                                                      Background="Transparent"
+                                                                      BorderThickness="0"
+                                                                      HorizontalAlignment="Stretch"
+                                                                      MinWidth="150"/>
+                                                        </Border>
+
+                                                        <TextBlock Grid.Column="2" 
+                                                                   FontSize="12"
+                                                                   Foreground="#757575"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,8,0"
+                                                                   IsVisible="{Binding IsConfigured}">
+                                                            <TextBlock.Text>
+                                                                <MultiBinding StringFormat="{}{0}">
+                                                                    <Binding Path="ExistingRule.TeacherName" FallbackValue="" TargetNullValue=""/>
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+
+                                                        <Border Grid.Column="3" 
+                                                                CornerRadius="4" Padding="4,2"
+                                                                VerticalAlignment="Center"
+                                                                Background="{Binding IsConfigured, Converter={StaticResource BoolToStatusColorConverter}}">
+                                                            <TextBlock Text="{Binding IsConfigured, Converter={StaticResource BoolToStatusTextConverter}}"
+                                                                       FontSize="11"
+                                                                       Foreground="White"
+                                                                       HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="#FFFFFF" Padding="24,16" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}"
+                           FontSize="13"
+                           Foreground="#757575"
+                           VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1" 
+                        Command="{Binding SkipCommand}"
+                        Background="Transparent"
+                        BorderBrush="#BDBDBD"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="24,10"
+                        Margin="0,0,12,0">
+                    <TextBlock Text="跳过" Foreground="#757575" FontSize="14"/>
+                </Button>
+
+                <Button Grid.Column="2" 
+                        Command="{Binding SaveAndContinueCommand}"
+                        Background="#1976D2"
+                        CornerRadius="8"
+                        Padding="24,10"
+                        IsEnabled="{Binding !IsLoading}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Save}" FontSize="16" Foreground="White"/>
+                        <TextBlock Text="保存并继续" Foreground="White" FontSize="14" FontWeight="Medium"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Panel Grid.Row="0" Grid.RowSpan="3" Background="#80000000" IsVisible="{Binding IsLoading}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <ui:ProgressRing IsActive="True" Width="40" Height="40"/>
+                <TextBlock Text="加载中..." Foreground="White" FontSize="14"/>
+            </StackPanel>
+        </Panel>
+
+    </Grid>
+</UserControl>

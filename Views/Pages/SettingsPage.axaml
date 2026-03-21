@@ -9,104 +9,103 @@
         <StackPanel Spacing="20" Margin="0,0,0,32">
             
             <StackPanel Spacing="8" Margin="0,0,0,8">
-                <TextBlock Text="设置"
+                <TextBlock Text="考勤配置"
                            FontSize="28"
                            FontWeight="Bold"
                            Foreground="#1976D2"/>
-                <TextBlock Text="管理设备和应用程序设置"
+                <TextBlock Text="配置班级的周期性排班规则"
                            FontSize="14"
                            Foreground="#757575"/>
             </StackPanel>
 
             <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
-                    BoxShadow="0 2 8 0 #1A000000">
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding IsBound}">
                 <StackPanel Spacing="20">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <Border Background="#E3F2FD" CornerRadius="8" Padding="10">
-                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Video}" FontSize="20" Foreground="#1976D2"/>
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="20" Foreground="#1976D2"/>
                         </Border>
-                        <TextBlock Text="设备信息" FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="周期排班" FontSize="18" FontWeight="SemiBold" Foreground="#424242"/>
+                            <TextBlock Text="配置班级在固定时段的周期性排班规则（周一至周五）" 
+                                       FontSize="12" Foreground="#757575"/>
+                        </StackPanel>
                     </StackPanel>
                     
-                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
-                        <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto">
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="设备ID" 
-                                       FontSize="13" Foreground="#757575" VerticalAlignment="Center"/>
-                            <Border Grid.Row="0" Grid.Column="1" Background="#FFFFFF" CornerRadius="4" Padding="8,4">
-                                <TextBlock Text="{Binding DeviceId}" 
-                                           FontFamily="Consolas" FontSize="13"
-                                           Foreground="#424242"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="设备名称" 
-                                       FontSize="13" Foreground="#757575" VerticalAlignment="Center" Margin="0,12,0,0"/>
-                            <Border Grid.Row="1" Grid.Column="1" Background="#FFFFFF" CornerRadius="4" Padding="8,4" Margin="0,12,0,0">
-                                <TextBlock Text="{Binding DeviceName}" 
-                                           FontSize="13"
-                                           Foreground="#424242"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="绑定班级" 
-                                       FontSize="13" Foreground="#757575" VerticalAlignment="Center" Margin="0,12,0,0"/>
-                            <Border Grid.Row="2" Grid.Column="1" Background="#FFFFFF" CornerRadius="4" Padding="8,4" Margin="0,12,0,0">
-                                <TextBlock Text="{Binding ClassName}" 
-                                           FontSize="13"
-                                           Foreground="#424242"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                        </Grid>
+                    <Border Background="#FFF8E1" CornerRadius="8" Padding="12" IsVisible="{Binding HasMissingSlots}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="16" Foreground="#FF9800"/>
+                            <TextBlock Text="存在未配置的排班时段，请完善配置" 
+                                       FontSize="13" Foreground="#E65100" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Border>
-                </StackPanel>
-            </Border>
 
-            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
-                    BoxShadow="0 2 8 0 #1A000000">
-                <StackPanel Spacing="20">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Border Background="#E8F5E9" CornerRadius="8" Padding="10">
-                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Globe}" FontSize="20" Foreground="#4CAF50"/>
-                        </Border>
-                        <TextBlock Text="服务器设置" FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    
-                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
-                        <Grid ColumnDefinitions="120,*" RowDefinitions="Auto">
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="服务器地址" 
-                                       FontSize="13" Foreground="#757575" VerticalAlignment="Center"/>
-                            <Border Grid.Row="0" Grid.Column="1" Background="#FFFFFF" CornerRadius="4" Padding="8,4">
-                                <TextBlock Text="{Binding ServerUrl}" 
-                                           FontSize="13"
-                                           Foreground="#424242"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                        </Grid>
+                    <Border Background="#E8F5E9" CornerRadius="8" Padding="12" IsVisible="{Binding ScheduleComplete}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="16" Foreground="#4CAF50"/>
+                            <TextBlock Text="排班配置完整" 
+                                       FontSize="13" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Border>
-                </StackPanel>
-            </Border>
 
-            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
-                    BoxShadow="0 2 8 0 #1A000000">
-                <StackPanel Spacing="20">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Border Background="#FFF3E0" CornerRadius="8" Padding="10">
-                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Setting}" FontSize="20" Foreground="#FF9800"/>
-                        </Border>
-                        <TextBlock Text="应用设置" FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    
+                    <Border Background="#FFEBEE" CornerRadius="8" Padding="12" IsVisible="{Binding HasError}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="16" Foreground="#E53935"/>
+                            <TextBlock Text="{Binding ErrorMessage}" 
+                                       FontSize="13" Foreground="#C62828" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
                     <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
                         <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-                                <TextBlock Text="开机自启动" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
-                                <TextBlock Text="系统启动时自动运行程序" FontSize="12" Foreground="#9E9E9E"/>
+                                <TextBlock Text="班级排班规则" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
+                                <TextBlock FontSize="12" Foreground="#9E9E9E">
+                                    <Run Text="已配置: "/>
+                                    <Run Text="{Binding ConfiguredCount}" Foreground="#4CAF50"/>
+                                    <Run Text=" / "/>
+                                    <Run Text="{Binding TotalCount}"/>
+                                </TextBlock>
                             </StackPanel>
-                            <ToggleSwitch Grid.Row="0" Grid.Column="1" 
-                                          IsChecked="{Binding AutoStart}"
-                                          VerticalAlignment="Center"/>
+                            <Button Grid.Row="0" Grid.Column="1"
+                                    Command="{Binding OpenScheduleConfigCommand}"
+                                    Background="#1976D2"
+                                    CornerRadius="8"
+                                    Padding="16,8"
+                                    VerticalAlignment="Center"
+                                    IsEnabled="{Binding !IsLoading}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Edit}" FontSize="14" Foreground="White"/>
+                                    <TextBlock Text="配置" Foreground="White" FontSize="13"/>
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
+
+                    <Panel IsVisible="{Binding IsLoading}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                            <ui:ProgressRing IsActive="True" Width="24" Height="24"/>
+                            <TextBlock Text="加载中..." FontSize="12" Foreground="#757575"/>
+                        </StackPanel>
+                    </Panel>
+
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding !IsBound}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#FFEBEE" CornerRadius="8" Padding="10">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="20" Foreground="#E53935"/>
+                        </Border>
+                        <TextBlock Text="设备未绑定" FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <TextBlock Text="请先绑定设备后再配置排班规则" 
+                               FontSize="14" Foreground="#757575"/>
                 </StackPanel>
             </Border>
 

@@ -157,7 +157,7 @@
                     Foreground="White"
                     Cursor="Hand"
                     HorizontalAlignment="Center"
-                    IsVisible="{Binding HasError}">
+                    IsVisible="{Binding ShowRetryButton}">
                 <Button.Styles>
                     <Style Selector="Button:pointerover">
                         <Setter Property="Background" Value="{DynamicResource SystemAccentColorDark1}"/>
