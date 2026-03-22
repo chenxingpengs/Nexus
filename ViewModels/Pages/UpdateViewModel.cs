@@ -67,6 +67,19 @@ namespace Nexus.ViewModels.Pages
             }
         }
 
+        private bool _autoDownloadAndInstall = true;
+        public bool AutoDownloadAndInstall
+        {
+            get => _autoDownloadAndInstall;
+            set
+            {
+                if (SetProperty(ref _autoDownloadAndInstall, value))
+                {
+                    _updateService.SetAutoDownloadAndInstall(value);
+                }
+            }
+        }
+
         private string _githubOwner = "";
         public string GitHubOwner
         {
@@ -108,6 +121,7 @@ namespace Nexus.ViewModels.Pages
             _updateService = updateService;
 
             _autoCheckUpdate = _updateService.UpdateConfig.AutoCheckOnStartup;
+            _autoDownloadAndInstall = _updateService.UpdateConfig.AutoDownloadAndInstall;
             _githubOwner = _updateService.UpdateConfig.GitHubOwner;
             _githubRepo = _updateService.UpdateConfig.GitHubRepo;
 

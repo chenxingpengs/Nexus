@@ -323,6 +323,12 @@ public class UpdateService : HttpService
         SaveUpdateConfig();
     }
 
+    public void SetAutoDownloadAndInstall(bool autoDownload)
+    {
+        _updateConfig.AutoDownloadAndInstall = autoDownload;
+        SaveUpdateConfig();
+    }
+
     private int CompareVersions(string version1, string version2)
     {
         var parts1 = version1.Split('.');

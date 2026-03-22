@@ -54,6 +54,7 @@ namespace Nexus.Models
         public string GitHubOwner { get; set; } = "chenxingpengs";
         public string GitHubRepo { get; set; } = "Nexus";
         public bool AutoCheckOnStartup { get; set; } = true;
+        public bool AutoDownloadAndInstall { get; set; } = true;
         public int CheckIntervalHours { get; set; } = 4;
         public DateTime? LastCheckTime { get; set; }
         public string? SkippedVersion { get; set; }

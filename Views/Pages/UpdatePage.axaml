@@ -214,6 +214,16 @@
                     </Border>
 
                     <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="自动下载并安装" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
+                                <TextBlock Text="发现新版本后自动下载并在后台静默安装" FontSize="12" Foreground="#9E9E9E"/>
+                            </StackPanel>
+                            <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding AutoDownloadAndInstall}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
                         <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto">
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="GitHub 用户名" 
                                        FontSize="13" Foreground="#757575" VerticalAlignment="Center"/>

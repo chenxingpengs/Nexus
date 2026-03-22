@@ -362,10 +362,21 @@ namespace Nexus.ViewModels
             var updateInfo = await _updateService.CheckForUpdateAsync();
             if (updateInfo != null)
             {
-                Dispatcher.UIThread.Post(() =>
+                if (_updateService.UpdateConfig.AutoDownloadAndInstall)
                 {
-                    SelectedNavigationItem = 2;
-                });
+                    var filePath = await _updateService.DownloadUpdateAsync(updateInfo);
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        _updateService.InstallUpdate(filePath);
+                    }
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        SelectedNavigationItem = 2;
+                    });
+                }
             }
         }
 
