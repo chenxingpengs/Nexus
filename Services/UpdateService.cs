@@ -16,7 +16,7 @@ public class UpdateService : HttpService
     private readonly string _updateConfigFile;
     private UpdateConfig _updateConfig;
 
-    public static readonly string CurrentVersion = "1.0.0";
+    public static readonly string CurrentVersion = typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
     public event Action<UpdateStatus, string>? StatusChanged;
     public event Action<UpdateProgress>? ProgressChanged;

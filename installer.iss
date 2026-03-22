@@ -1,5 +1,5 @@
 #define MyAppName "Nexus"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "红旗中学"
 #define MyAppURL "https://hqzx.me"
 #define MyAppExeName "Nexus.exe"

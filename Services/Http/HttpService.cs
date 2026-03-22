@@ -269,6 +269,8 @@ public class HttpService : IDisposable
     {
         var request = new HttpRequestMessage(method, url);
         
+        request.Headers.UserAgent.ParseAdd("Nexus/1.0.0");
+        
         if (body != null)
         {
             var json = JsonSerializer.Serialize(body, JsonOptions);
