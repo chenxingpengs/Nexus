@@ -118,231 +118,251 @@ namespace Nexus.Services
             string deviceType = "classroom_terminal",
             int maxRetries = 10)
         {
-            return await ErrorHandlingService.ExecuteAsync(async () =>
+            int attempts = 0;
+            Exception? lastException = null;
+
+            while (attempts <= maxRetries)
             {
-                if (_socket?.Connected == true)
+                try
                 {
-                    await DisconnectAsync();
-                }
-
-                _cancellationTokenSource = new CancellationTokenSource();
-                _reconnectAttempts = 0;
-
-                string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
-                string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
-
-                _currentServerUrl = $"{wsBaseUrl}/desktop";
-
-                Debug.WriteLine($"[SocketIO] 基础 URL: {wsBaseUrl}");
-                Debug.WriteLine($"[SocketIO] 命名空间: /desktop");
-                Debug.WriteLine($"[SocketIO] Token: {token.Substring(0, Math.Min(20, token.Length))}...");
-                Debug.WriteLine($"[SocketIO] DeviceId: {deviceId}");
-                Debug.WriteLine($"[SocketIO] DeviceType: {deviceType}");
-
-                UpdateConnectionInfo(ConnectionStatus.Connecting, "正在建立WebSocket连接...");
-
-                var options = new SocketIOClient.SocketIOOptions
-                {
-                    Path = "/socket.io",
-                    Query = new Dictionary<string, string>
+                    if (_socket?.Connected == true)
                     {
-                        { "token", token },
-                        { "device_id", deviceId },
-                        { "device_type", deviceType }
-                    },
-                    Reconnection = true,
-                    ReconnectionAttempts = maxRetries,
-                    ReconnectionDelay = 1000,
-                    ReconnectionDelayMax = 30000,
-                    ConnectionTimeout = TimeSpan.FromSeconds(15),
-                };
+                        await DisconnectAsync();
+                    }
 
-                Debug.WriteLine($"[SocketIO] 连接 URL: {wsBaseUrl}/desktop/bind");
-                Debug.WriteLine($"[SocketIO] Path: /socket.io");
-
-                _socket = new SocketIOClient.SocketIO($"{wsBaseUrl}/desktop", options);
-
-                _socket.OnConnected += (sender, e) =>
-                {
-                    Debug.WriteLine("[SocketIO] 已连接到 /desktop 命名空间");
+                    _cancellationTokenSource = new CancellationTokenSource();
                     _reconnectAttempts = 0;
-                    _connectedAt = DateTime.Now;
-                    StartHeartbeat();
-                    UpdateConnectionInfo(ConnectionStatus.Connected, "WebSocket连接成功");
-                    Connected?.Invoke(this, EventArgs.Empty);
-                };
 
-                _socket.OnDisconnected += (sender, e) =>
-                {
-                    Debug.WriteLine("[SocketIO] 已断开");
-                    StopHeartbeat();
-                    _connectedAt = null;
-                    _currentLatency = 0;
-                    UpdateConnectionInfo(ConnectionStatus.Disconnected, "WebSocket连接已断开");
-                    Disconnected?.Invoke(this, EventArgs.Empty);
+                    string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
+                    string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
 
-                    _reconnectAttempts++;
-                    var msg = $"正在重连... (尝试 {_reconnectAttempts})";
-                    UpdateConnectionInfo(ConnectionStatus.Reconnecting, msg);
-                    Reconnecting?.Invoke(this, msg);
-                };
+                    _currentServerUrl = $"{wsBaseUrl}/desktop";
 
-                _socket.On("connect_response", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 connect_response: {response}");
-                    try
-                    {
-                        var json = response.GetValue().ToString();
-                        Debug.WriteLine($"[SocketIO] connect_response JSON: {json}");
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-                        var doc = JsonDocument.Parse(bytes);
-                        var element = doc.RootElement.Clone();
-                        doc.Dispose();
-                        MessageReceived?.Invoke(this, element);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[SocketIO] 解析 connect_response 失败: {ex.Message}");
-                        ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
-                    }
-                });
+                    Debug.WriteLine($"[SocketIO] 基础 URL: {wsBaseUrl}");
+                    Debug.WriteLine($"[SocketIO] 命名空间: /desktop");
+                    Debug.WriteLine($"[SocketIO] Token: {token.Substring(0, Math.Min(20, token.Length))}...");
+                    Debug.WriteLine($"[SocketIO] DeviceId: {deviceId}");
+                    Debug.WriteLine($"[SocketIO] DeviceType: {deviceType}");
 
-                _socket.On("bind_notification", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 bind_notification: {response}");
-                    try
-                    {
-                        var json = response.GetValue().ToString();
-                        Debug.WriteLine($"[SocketIO] bind_notification JSON: {json}");
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-                        var doc = JsonDocument.Parse(bytes);
-                        var element = doc.RootElement.Clone();
-                        doc.Dispose();
-                        MessageReceived?.Invoke(this, element);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[SocketIO] 解析 bind_notification 失败: {ex.Message}");
-                        ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
-                    }
-                });
+                    UpdateConnectionInfo(ConnectionStatus.Connecting, "正在建立WebSocket连接...");
 
-                _socket.On("pong", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 pong: {response}");
-                    if (_lastPingTime.HasValue)
+                    var options = new SocketIOClient.SocketIOOptions
                     {
-                        _currentLatency = (int)(DateTime.Now - _lastPingTime.Value).TotalMilliseconds;
-                        LatencyUpdated?.Invoke(this, _currentLatency);
-                        UpdateConnectionInfo(ConnectionStatus.Connected, $"已连接 ({_currentLatency}ms)");
-                        Debug.WriteLine($"[SocketIO] 延迟: {_currentLatency}ms");
-                    }
-                });
-
-                _socket.On("power_control", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 power_control: {response}");
-                    try
-                    {
-                        var json = response.GetValue().ToString();
-                        Debug.WriteLine($"[SocketIO] power_control JSON: {json}");
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-                        var doc = JsonDocument.Parse(bytes);
-                        var element = doc.RootElement.Clone();
-                        doc.Dispose();
-                        MessageReceived?.Invoke(this, element);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[SocketIO] 解析 power_control 失败: {ex.Message}");
-                        ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
-                    }
-                });
-
-                _socket.On("wol_request", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 wol_request: {response}");
-                    try
-                    {
-                        var json = response.GetValue().ToString();
-                        Debug.WriteLine($"[SocketIO] wol_request JSON: {json}");
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-                        var doc = JsonDocument.Parse(bytes);
-                        var element = doc.RootElement.Clone();
-                        doc.Dispose();
-                        MessageReceived?.Invoke(this, element);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[SocketIO] 解析 wol_request 失败: {ex.Message}");
-                        ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
-                    }
-                });
-
-                _socket.On("notification:push", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 notification:push: {response}");
-                    try
-                    {
-                        var json = response.GetValue().ToString();
-                        var notification = JsonSerializer.Deserialize<Notification>(json, new JsonSerializerOptions
+                        Path = "/socket.io",
+                        Query = new Dictionary<string, string>
                         {
-                            PropertyNameCaseInsensitive = true
-                        });
-                        
-                        if (notification != null)
+                            { "token", token },
+                            { "device_id", deviceId },
+                            { "device_type", deviceType }
+                        },
+                        Reconnection = true,
+                        ReconnectionAttempts = maxRetries,
+                        ReconnectionDelay = 1000,
+                        ReconnectionDelayMax = 30000,
+                        ConnectionTimeout = TimeSpan.FromSeconds(15),
+                    };
+
+                    Debug.WriteLine($"[SocketIO] 连接 URL: {wsBaseUrl}/desktop/bind");
+                    Debug.WriteLine($"[SocketIO] Path: /socket.io");
+
+                    _socket = new SocketIOClient.SocketIO($"{wsBaseUrl}/desktop", options);
+
+                    _socket.OnConnected += (sender, e) =>
+                    {
+                        Debug.WriteLine("[SocketIO] 已连接到 /desktop 命名空间");
+                        _reconnectAttempts = 0;
+                        _connectedAt = DateTime.Now;
+                        StartHeartbeat();
+                        UpdateConnectionInfo(ConnectionStatus.Connected, "WebSocket连接成功");
+                        Connected?.Invoke(this, EventArgs.Empty);
+                    };
+
+                    _socket.OnDisconnected += (sender, e) =>
+                    {
+                        Debug.WriteLine("[SocketIO] 已断开");
+                        StopHeartbeat();
+                        _connectedAt = null;
+                        _currentLatency = 0;
+                        UpdateConnectionInfo(ConnectionStatus.Disconnected, "WebSocket连接已断开");
+                        Disconnected?.Invoke(this, EventArgs.Empty);
+
+                        _reconnectAttempts++;
+                        var msg = $"正在重连... (尝试 {_reconnectAttempts})";
+                        UpdateConnectionInfo(ConnectionStatus.Reconnecting, msg);
+                        Reconnecting?.Invoke(this, msg);
+                    };
+
+                    _socket.On("connect_response", response =>
+                    {
+                        Debug.WriteLine($"[SocketIO] 收到 connect_response: {response}");
+                        try
                         {
-                            Debug.WriteLine($"[SocketIO] 通知: {notification.Title} - {notification.Content}");
-                            NotificationReceived?.Invoke(this, notification);
+                            var json = response.GetValue().ToString();
+                            Debug.WriteLine($"[SocketIO] connect_response JSON: {json}");
+                            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                            var doc = JsonDocument.Parse(bytes);
+                            var element = doc.RootElement.Clone();
+                            doc.Dispose();
+                            MessageReceived?.Invoke(this, element);
                         }
-                    }
-                    catch (Exception ex)
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析 connect_response 失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
+                        }
+                    });
+
+                    _socket.On("bind_notification", response =>
                     {
-                        Debug.WriteLine($"[SocketIO] 解析通知失败: {ex.Message}");
-                        ErrorOccurred?.Invoke(this, $"解析通知失败: {ex.Message}");
-                    }
-                });
+                        Debug.WriteLine($"[SocketIO] 收到 bind_notification: {response}");
+                        try
+                        {
+                            var json = response.GetValue().ToString();
+                            Debug.WriteLine($"[SocketIO] bind_notification JSON: {json}");
+                            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                            var doc = JsonDocument.Parse(bytes);
+                            var element = doc.RootElement.Clone();
+                            doc.Dispose();
+                            MessageReceived?.Invoke(this, element);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析 bind_notification 失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
+                        }
+                    });
 
-                _socket.On("attendance_update", response =>
-                {
-                    Debug.WriteLine($"[SocketIO] 收到 attendance_update: {response}");
-                    try
+                    _socket.On("pong", response =>
                     {
-                        var json = response.GetValue().ToString();
-                        Debug.WriteLine($"[SocketIO] attendance_update JSON: {json}");
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-                        var doc = JsonDocument.Parse(bytes);
-                        var element = doc.RootElement.Clone();
-                        doc.Dispose();
-                        AttendanceUpdated?.Invoke(this, element);
-                    }
-                    catch (Exception ex)
+                        Debug.WriteLine($"[SocketIO] 收到 pong: {response}");
+                        if (_lastPingTime.HasValue)
+                        {
+                            _currentLatency = (int)(DateTime.Now - _lastPingTime.Value).TotalMilliseconds;
+                            LatencyUpdated?.Invoke(this, _currentLatency);
+                            UpdateConnectionInfo(ConnectionStatus.Connected, $"已连接 ({_currentLatency}ms)");
+                            Debug.WriteLine($"[SocketIO] 延迟: {_currentLatency}ms");
+                        }
+                    });
+
+                    _socket.On("power_control", response =>
                     {
-                        Debug.WriteLine($"[SocketIO] 解析 attendance_update 失败: {ex.Message}");
-                        ErrorOccurred?.Invoke(this, $"解析考勤更新失败: {ex.Message}");
+                        Debug.WriteLine($"[SocketIO] 收到 power_control: {response}");
+                        try
+                        {
+                            var json = response.GetValue().ToString();
+                            Debug.WriteLine($"[SocketIO] power_control JSON: {json}");
+                            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                            var doc = JsonDocument.Parse(bytes);
+                            var element = doc.RootElement.Clone();
+                            doc.Dispose();
+                            MessageReceived?.Invoke(this, element);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析 power_control 失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
+                        }
+                    });
+
+                    _socket.On("wol_request", response =>
+                    {
+                        Debug.WriteLine($"[SocketIO] 收到 wol_request: {response}");
+                        try
+                        {
+                            var json = response.GetValue().ToString();
+                            Debug.WriteLine($"[SocketIO] wol_request JSON: {json}");
+                            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                            var doc = JsonDocument.Parse(bytes);
+                            var element = doc.RootElement.Clone();
+                            doc.Dispose();
+                            MessageReceived?.Invoke(this, element);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析 wol_request 失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析消息失败: {ex.Message}");
+                        }
+                    });
+
+                    _socket.On("notification:push", response =>
+                    {
+                        Debug.WriteLine($"[SocketIO] 收到 notification:push: {response}");
+                        try
+                        {
+                            var json = response.GetValue().ToString();
+                            var notification = JsonSerializer.Deserialize<Notification>(json, new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            });
+                            
+                            if (notification != null)
+                            {
+                                Debug.WriteLine($"[SocketIO] 通知: {notification.Title} - {notification.Content}");
+                                NotificationReceived?.Invoke(this, notification);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析通知失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析通知失败: {ex.Message}");
+                        }
+                    });
+
+                    _socket.On("attendance_update", response =>
+                    {
+                        Debug.WriteLine($"[SocketIO] 收到 attendance_update: {response}");
+                        try
+                        {
+                            var json = response.GetValue().ToString();
+                            Debug.WriteLine($"[SocketIO] attendance_update JSON: {json}");
+                            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                            var doc = JsonDocument.Parse(bytes);
+                            var element = doc.RootElement.Clone();
+                            doc.Dispose();
+                            AttendanceUpdated?.Invoke(this, element);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析 attendance_update 失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析考勤更新失败: {ex.Message}");
+                        }
+                    });
+
+                    _socket.OnError += (sender, e) =>
+                    {
+                        Debug.WriteLine($"[SocketIO] 错误: {e}");
+                        UpdateConnectionInfo(ConnectionStatus.Error, $"连接错误: {e}", e);
+                        ErrorOccurred?.Invoke(this, e);
+                    };
+
+                    _socket.OnReconnected += (sender, e) =>
+                    {
+                        Debug.WriteLine("[SocketIO] 重连成功");
+                        _reconnectAttempts = 0;
+                        _connectedAt = DateTime.Now;
+                        StartHeartbeat();
+                        UpdateConnectionInfo(ConnectionStatus.Connected, "WebSocket重连成功");
+                        Reconnected?.Invoke(this, EventArgs.Empty);
+                    };
+
+                    await _socket.ConnectAsync();
+
+                    return (true, null);
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    attempts++;
+                    Debug.WriteLine($"[SocketIO] 连接失败 (尝试 {attempts}/{maxRetries + 1}): {ex.Message}");
+
+                    if (attempts <= maxRetries)
+                    {
+                        await Task.Delay(1000 * attempts);
                     }
-                });
+                }
+            }
 
-                _socket.OnError += (sender, e) =>
-                {
-                    Debug.WriteLine($"[SocketIO] 错误: {e}");
-                    UpdateConnectionInfo(ConnectionStatus.Error, $"连接错误: {e}", e);
-                    ErrorOccurred?.Invoke(this, e);
-                };
-
-                _socket.OnReconnected += (sender, e) =>
-                {
-                    Debug.WriteLine("[SocketIO] 重连成功");
-                    _reconnectAttempts = 0;
-                    _connectedAt = DateTime.Now;
-                    StartHeartbeat();
-                    UpdateConnectionInfo(ConnectionStatus.Connected, "WebSocket重连成功");
-                    Reconnected?.Invoke(this, EventArgs.Empty);
-                };
-
-                await _socket.ConnectAsync();
-
-            }, "SocketIO连接", 3);
+            return (false, lastException?.Message ?? "SocketIO连接失败");
         }
 
         public async Task DisconnectAsync()

@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Nexus.Models.Schedule;
 using Nexus.Services;
+using Nexus.Services.Http;
 using Nexus.Services.Widget;
 using Nexus.ViewModels;
 using Nexus.ViewModels.Pages;
@@ -23,6 +24,7 @@ namespace Nexus
         public static readonly string Version = UpdateService.CurrentVersion;
 
         private ConfigService? _configService;
+        private ToastService? _toastService;
         private AuthService? _authService;
         private UpdateService? _updateService;
         private TrayService? _trayService;
@@ -46,9 +48,10 @@ namespace Nexus
                 DisableAvaloniaDataAnnotationValidation();
 
                 _configService = new ConfigService();
-                _authService = new AuthService(_configService);
-                _updateService = new UpdateService(_configService);
-                _scheduleService = new ScheduleService(_configService);
+                _toastService = new ToastService();
+                _authService = new AuthService(_configService, _toastService);
+                _updateService = new UpdateService(_configService, _toastService);
+                _scheduleService = new ScheduleService(_configService, _toastService);
 
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 配置加载完成: IsBound={_configService.Config.IsBound}");
 
@@ -146,6 +149,7 @@ namespace Nexus
             };
 
             desktop.MainWindow = splashScreen;
+            splashScreen.Show();
         }
 
         private async Task VerifyAndNavigateAsync(IClassicDesktopStyleApplicationLifetime desktop, Window loadingWindow)
@@ -207,44 +211,33 @@ namespace Nexus
 
         private void ShowBindWindow(IClassicDesktopStyleApplicationLifetime desktop, Window? closeWindow = null)
         {
-            var mainWindowViewModel = new MainWindowViewModel();
+            var mainWindowViewModel = new MainWindowViewModel(_configService!, _toastService!, _scheduleService!);
             var mainWindow = new MainWindow
             {
                 DataContext = mainWindowViewModel
             };
 
-            mainWindowViewModel.BindSuccessAndReady += async () =>
+            mainWindowViewModel.BindSuccessAndReady += () =>
             {
-                await Dispatcher.UIThread.InvokeAsync(async () =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     mainWindow.Close();
-                    
-                    var classId = _configService?.Config.BindInfo?.ClassId ?? 0;
-                    var className = _configService?.Config.BindInfo?.ClassName ?? "";
-                    
-                    if (classId > 0 && _scheduleService != null)
-                    {
-                        var completeness = await _scheduleService.CheckCompletenessAsync(classId);
-                        
-                        if (completeness != null && !completeness.IsComplete)
-                        {
-                            ShowScheduleSetupWindow(desktop, classId, className);
-                        }
-                        else
-                        {
-                            ShowMainView(desktop, null, true, true);
-                        }
-                    }
-                    else
-                    {
-                        ShowMainView(desktop, null, true, true);
-                    }
+                    ShowMainView(desktop, null, true, true);
+                });
+            };
+
+            mainWindowViewModel.RequestOpenScheduleSetup += (classId, className) =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    mainWindow.Close();
+                    ShowScheduleSetupWindow(desktop, classId, className);
                 });
             };
 
             mainWindow.Closed += (s, e) =>
             {
-                if (desktop.MainWindow == mainWindow && mainWindowViewModel.BindState != BindState.BindSuccess)
+                if (desktop.MainWindow == mainWindow && mainWindowViewModel.BindState != BindState.BindSuccess && mainWindowViewModel.BindState != BindState.ScheduleIncomplete)
                 {
                     desktop.Shutdown();
                 }
@@ -257,6 +250,8 @@ namespace Nexus
 
         private void ShowScheduleSetupWindow(IClassicDesktopStyleApplicationLifetime desktop, int classId, string className)
         {
+            System.Diagnostics.Debug.WriteLine($"[Nexus] ShowScheduleSetupWindow: classId={classId}, className={className}");
+            
             var viewModel = new ScheduleSetupViewModel(_scheduleService!, _configService!);
             var scheduleSetupWindow = new ScheduleSetupWindow
             {
@@ -265,8 +260,11 @@ namespace Nexus
 
             viewModel.SetupCompleted += () =>
             {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] SetupCompleted 事件触发");
+                desktop.MainWindow = null;
                 Dispatcher.UIThread.Post(() =>
                 {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] SetupCompleted 处理: MainWindow={desktop.MainWindow?.GetType().Name ?? "null"}");
                     scheduleSetupWindow.Close();
                     ShowMainView(desktop, null, true, true);
                 });
@@ -274,8 +272,11 @@ namespace Nexus
 
             viewModel.RequestSkip += () =>
             {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] RequestSkip 事件触发");
+                desktop.MainWindow = null;
                 Dispatcher.UIThread.Post(() =>
                 {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] RequestSkip 处理: MainWindow={desktop.MainWindow?.GetType().Name ?? "null"}");
                     scheduleSetupWindow.Close();
                     ShowMainView(desktop, null, true, true);
                 });
@@ -283,8 +284,10 @@ namespace Nexus
 
             scheduleSetupWindow.Closed += (s, e) =>
             {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] ScheduleSetupWindow.Closed: MainWindow={desktop.MainWindow?.GetType().Name ?? "null"}");
                 if (desktop.MainWindow == scheduleSetupWindow)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] Closed 事件触发 ShowMainView");
                     ShowMainView(desktop, null, true, true);
                 }
             };

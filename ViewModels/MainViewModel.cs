@@ -291,7 +291,9 @@ namespace Nexus.ViewModels
                     CurrentPage = new UpdatePage(_updateService);
                     break;
                 case 3:
-                    CurrentPage = new AboutPage(_configService, _authService);
+                    var aboutPage = new AboutPage(_configService, _authService);
+                    aboutPage.RequestLogout += () => RequestLogout?.Invoke();
+                    CurrentPage = aboutPage;
                     break;
                 default:
                     var defaultSchedulePage = new SettingsPage(_configService, _authService, _scheduleService);

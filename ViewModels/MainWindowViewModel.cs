@@ -1,6 +1,9 @@
 using CommunityToolkit.Mvvm.Input;
+using Nexus.Models.Schedule;
 using Nexus.Services;
+using Nexus.Services.Http;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -12,6 +15,7 @@ namespace Nexus.ViewModels
     public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         public event Action? BindSuccessAndReady;
+        public event Action<int, string>? RequestOpenScheduleSetup;
 
 
         #region 属性
@@ -78,6 +82,7 @@ namespace Nexus.ViewModels
                     OnPropertyChanged(nameof(IsShowVerifySuccess));
                     OnPropertyChanged(nameof(IsShowBindSuccess));
                     OnPropertyChanged(nameof(IsShowError));
+                    OnPropertyChanged(nameof(IsShowScheduleIncomplete));
                 }
             }
         }
@@ -85,8 +90,9 @@ namespace Nexus.ViewModels
         public bool IsShowQrCode => BindState == BindState.ShowQrCode;
         public bool IsShowLoading => BindState == BindState.Loading;
         public bool IsShowVerifySuccess => BindState == BindState.VerifySuccess;
-        public bool IsShowBindSuccess => BindState == BindState.BindSuccess;
+        public bool IsShowBindSuccess => BindState == BindState.BindSuccess || BindState == BindState.ScheduleIncomplete;
         public bool IsShowError => BindState == BindState.Error;
+        public bool IsShowScheduleIncomplete => BindState == BindState.ScheduleIncomplete;
 
         private string _verifyUserName = string.Empty;
         public string VerifyUserName
@@ -100,6 +106,34 @@ namespace Nexus.ViewModels
         {
             get => _bindClassName;
             set => SetProperty(ref _bindClassName, value);
+        }
+
+        private int _bindClassId;
+        public int BindClassId
+        {
+            get => _bindClassId;
+            set => SetProperty(ref _bindClassId, value);
+        }
+
+        private List<MissingSlotModel> _missingSlots = new();
+        public List<MissingSlotModel> MissingSlots
+        {
+            get => _missingSlots;
+            set => SetProperty(ref _missingSlots, value);
+        }
+
+        private int _missingSlotsCount;
+        public int MissingSlotsCount
+        {
+            get => _missingSlotsCount;
+            set => SetProperty(ref _missingSlotsCount, value);
+        }
+
+        private int _totalSlotsCount;
+        public int TotalSlotsCount
+        {
+            get => _totalSlotsCount;
+            set => SetProperty(ref _totalSlotsCount, value);
         }
 
         private string _errorMessage = string.Empty;
@@ -265,15 +299,19 @@ namespace Nexus.ViewModels
 
         public ICommand RefreshTokenCommand { get; }
         public ICommand RetryCommand { get; }
+        public ICommand OpenScheduleSetupCommand { get; }
+        public ICommand ContinueWithoutScheduleCommand { get; }
 
         #endregion
 
         #region 私有字段
 
-        private readonly HttpClient _httpClient;
+        private readonly HttpService _httpService;
         private readonly QRCodeService _qrCodeService;
         private readonly SocketIOService _socketIOService;
         private readonly ConfigService _configService;
+        private readonly ScheduleService _scheduleService;
+        private readonly ToastService _toastService;
         private bool _isDisposed;
 
         #endregion
@@ -291,13 +329,12 @@ namespace Nexus.ViewModels
             return DeviceIdentifier.GetDeviceInfo();
         }
 
-        public MainWindowViewModel()
+        public MainWindowViewModel(ConfigService configService, ToastService toastService, ScheduleService scheduleService)
         {
-            _configService = new ConfigService();
-            _httpClient = new HttpClient
-            {
-                Timeout = TimeSpan.FromSeconds(30)
-            };
+            _configService = configService;
+            _toastService = toastService;
+            _scheduleService = scheduleService;
+            _httpService = new HttpService(configService, toastService);
             _qrCodeService = new QRCodeService();
             _socketIOService = new SocketIOService(_configService.Config.ServerUrl);
 
@@ -312,6 +349,8 @@ namespace Nexus.ViewModels
 
             RefreshTokenCommand = new AsyncRelayCommand(RefreshToken);
             RetryCommand = new AsyncRelayCommand(RefreshToken);
+            OpenScheduleSetupCommand = new RelayCommand(OnOpenScheduleSetup);
+            ContinueWithoutScheduleCommand = new RelayCommand(OnContinueWithoutSchedule);
 
             if (!string.IsNullOrEmpty(_configService.Config.DeviceId))
             {
@@ -535,7 +574,6 @@ namespace Nexus.ViewModels
             ErrorMessage = message;
             StatusMessage = message;
 
-            // 3秒后自动重试
             await Task.Delay(3000);
             await RefreshToken();
         }
@@ -588,9 +626,8 @@ namespace Nexus.ViewModels
                     return;
                 }
 
-                BindState = BindState.BindSuccess;
-                StatusMessage = message;
                 BindClassName = className;
+                BindClassId = classId;
 
                 DateTime? expiresAt = null;
                 if (!string.IsNullOrEmpty(tokenExpiresAt) && DateTime.TryParse(tokenExpiresAt, out var parsedDate))
@@ -600,9 +637,42 @@ namespace Nexus.ViewModels
 
                 _configService.UpdateBindInfo(classId, BindClassName, accessToken, expiresAt);
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 绑定信息已保存，classId: {classId}, className: {BindClassName}");
+                System.Diagnostics.Debug.WriteLine($"[Nexus] ConfigService.Config.AccessToken: {(string.IsNullOrEmpty(_configService.Config.AccessToken) ? "空" : _configService.Config.AccessToken.Substring(0, Math.Min(20, _configService.Config.AccessToken.Length)) + "...")}");
 
                 var savedConfig = _configService.Config;
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 验证保存: AccessToken={(!string.IsNullOrEmpty(savedConfig.AccessToken) ? "已保存" : "未保存")}, BindInfo={(savedConfig.BindInfo != null ? savedConfig.BindInfo.ClassName : "null")}");
+
+                StatusMessage = "正在检查排班配置...";
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 开始检查排班配置, classId={classId}");
+                
+                ScheduleCompletenessModel? completeness = null;
+                try
+                {
+                    completeness = await _scheduleService.CheckCompletenessAsync(classId);
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 排班检查完成: completeness={(completeness != null ? $"IsComplete={completeness.IsComplete}, MissingSlots={completeness.MissingSlots?.Count ?? 0}" : "null")}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 排班检查异常: {ex.Message}");
+                }
+
+                if (completeness == null || !completeness.IsComplete)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 设置 ScheduleIncomplete 状态");
+                    BindState = BindState.ScheduleIncomplete;
+                    StatusMessage = "排班配置不完整";
+                    MissingSlots = completeness?.MissingSlots ?? new List<MissingSlotModel>();
+                    MissingSlotsCount = MissingSlots.Count;
+                    TotalSlotsCount = completeness?.FixedTimeSlots?.Count * 5 ?? 0;
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 排班不完整: 缺失 {MissingSlotsCount} 个时段, 共 {TotalSlotsCount} 个时段");
+                }
+                else
+                {
+                    BindState = BindState.BindSuccess;
+                    StatusMessage = message;
+                    await Task.Delay(1500);
+                    BindSuccessAndReady?.Invoke();
+                }
             }
             else
             {
@@ -612,9 +682,15 @@ namespace Nexus.ViewModels
                 System.Diagnostics.Debug.WriteLine($"[Nexus] data 为空");
                 return;
             }
+        }
 
-            await Task.Delay(1500);
+        private void OnOpenScheduleSetup()
+        {
+            RequestOpenScheduleSetup?.Invoke(BindClassId, BindClassName);
+        }
 
+        private void OnContinueWithoutSchedule()
+        {
             BindSuccessAndReady?.Invoke();
         }
 
@@ -624,7 +700,6 @@ namespace Nexus.ViewModels
             ErrorMessage = message;
             StatusMessage = message;
 
-            // 3秒后自动重试
             await Task.Delay(3000);
             await RefreshToken();
         }
@@ -647,75 +722,45 @@ namespace Nexus.ViewModels
             var (deviceId, macAddress, ipAddress) = DeviceIdentifier.GetDeviceInfo();
             DeviceId = deviceId;
 
-            var url = $"{_configService.Config.ServerUrl}/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}&device_type={Uri.EscapeDataString(DeviceType)}&app_version={Uri.EscapeDataString(AppVersion ?? "")}";
+            var endpoint = $"/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}&device_type={Uri.EscapeDataString(DeviceType)}&app_version={Uri.EscapeDataString(AppVersion ?? "")}";
 
             if (!string.IsNullOrEmpty(macAddress))
             {
-                url += $"&mac_address={Uri.EscapeDataString(macAddress)}";
+                endpoint += $"&mac_address={Uri.EscapeDataString(macAddress)}";
             }
             if (!string.IsNullOrEmpty(ipAddress))
             {
-                url += $"&ip_address={Uri.EscapeDataString(ipAddress)}";
+                endpoint += $"&ip_address={Uri.EscapeDataString(ipAddress)}";
             }
 
-            System.Diagnostics.Debug.WriteLine($"[CampusLink] 请求 URL: {url}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceId: {DeviceId}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceName: {DeviceName}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] DeviceType: {DeviceType}");
             System.Diagnostics.Debug.WriteLine($"[CampusLink] AppVersion: {AppVersion}");
-            System.Diagnostics.Debug.WriteLine($"[CampusLink] MacAddress: {macAddress}");
-            System.Diagnostics.Debug.WriteLine($"[CampusLink] IpAddress: {ipAddress}");
 
-            var (success, responseData, errorMessage) = await ErrorHandlingService.ExecuteAsync<string?>(
-                async () =>
-                {
-                    System.Diagnostics.Debug.WriteLine($"[CampusLink] 发送 HTTP 请求...");
-                    var response = await _httpClient.GetAsync(url);
-                    System.Diagnostics.Debug.WriteLine($"[CampusLink] 收到响应: {response.StatusCode}");
-
-                    var content = await response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"[CampusLink] 响应内容长度: {content?.Length ?? 0}");
-
-                    if (!string.IsNullOrEmpty(content) && content.Length > 200)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[CampusLink] 响应内容前200字符: {content.Substring(0, 200)}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[CampusLink] 响应内容: {content}");
-                    }
-
-                    response.EnsureSuccessStatusCode();
-                    return content;
-                },
-                "获取绑定Token",
-                maxRetries: 3,
-                retryDelayMs: 2000);
-
-            if (!success)
+            var response = await _httpService.GetAsync<BindTokenData>(endpoint, new RequestOptions
             {
-                System.Diagnostics.Debug.WriteLine($"[CampusLink] 请求失败: {errorMessage}");
+                OperationName = "获取绑定Token",
+                MaxRetries = 3,
+                RetryDelayMs = 2000,
+                RequireAuth = false,
+                ShowErrorToast = false
+            });
+
+            if (response == null || !response.IsSuccess || response.Data == null || string.IsNullOrEmpty(response.Data.Token))
+            {
+                var errorMsg = response?.Msg ?? "获取绑定Token失败";
+                System.Diagnostics.Debug.WriteLine($"[CampusLink] 请求失败: {errorMsg}");
                 BindState = BindState.Error;
-                ErrorMessage = errorMessage ?? "未知错误";
-                StatusMessage = errorMessage ?? "未知错误";
+                ErrorMessage = errorMsg;
+                StatusMessage = errorMsg;
+                _toastService.ShowError(errorMsg);
                 return;
             }
 
-            // 解析响应
-            var (parseSuccess, token, parseError) = await ParseTokenResponse(responseData);
-
-            if (!parseSuccess)
-            {
-                BindState = BindState.Error;
-                ErrorMessage = parseError ?? "解析失败";
-                StatusMessage = parseError ?? "解析失败";
-                return;
-            }
-
-            Token = token ?? "";
+            Token = response.Data.Token;
             StatusMessage = "获取 token 成功，正在生成二维码...";
 
-            // 生成二维码
             var (qrSuccess, _, qrError) = await GenerateQrCodeAsync(Token);
 
             if (!qrSuccess)
@@ -743,97 +788,13 @@ namespace Nexus.ViewModels
             StatusMessage = "请使用微信小程序扫码绑定";
         }
 
-        /// <summary>
-        /// 解析 Token 响应
-        /// </summary>
-        private Task<(bool Success, string? Token, string? ErrorMessage)> ParseTokenResponse(string? responseData)
-        {
-            if (string.IsNullOrWhiteSpace(responseData))
-            {
-                return Task.FromResult((false, (string?)null, (string?)"服务器返回空响应"));
-            }
-
-            if (responseData.TrimStart().StartsWith("<"))
-            {
-                var errorInfo = ExtractErrorFromHtml(responseData);
-                return Task.FromResult((false, (string?)null, (string?)$"服务器返回错误页面：{errorInfo}"));
-            }
-
-            try
-            {
-                using var jsonDoc = JsonDocument.Parse(responseData);
-                var root = jsonDoc.RootElement;
-
-                if (!root.TryGetProperty("code", out var codeElement) || codeElement.GetInt32() != 200)
-                {
-                    var msg = root.TryGetProperty("msg", out var msgElement)
-                        ? msgElement.GetString()
-                        : "获取 token 失败";
-                    return Task.FromResult((false, (string?)null, (string?)msg));
-                }
-
-                if (root.TryGetProperty("data", out var dataElement) &&
-                    dataElement.TryGetProperty("token", out var tokenElement))
-                {
-                    var token = tokenElement.GetString();
-                    if (!string.IsNullOrEmpty(token))
-                    {
-                        return Task.FromResult((true, (string?)token, (string?)null));
-                    }
-                }
-
-                return Task.FromResult((false, (string?)null, (string?)"响应中缺少 token 数据"));
-            }
-            catch (JsonException ex)
-            {
-                var preview = responseData.Length > 100 ? responseData.Substring(0, 100) + "..." : responseData;
-                return Task.FromResult((false, (string?)null, (string?)$"解析响应失败：{ex.Message}\n响应内容：{preview}"));
-            }
-        }
-
-        /// <summary>
-        /// 从 HTML 错误页面中提取错误信息
-        /// </summary>
-        private string ExtractErrorFromHtml(string html)
-        {
-            try
-            {
-                // 尝试提取 title 标签内容
-                var titleStart = html.IndexOf("<title>", StringComparison.OrdinalIgnoreCase);
-                var titleEnd = html.IndexOf("</title>", StringComparison.OrdinalIgnoreCase);
-                if (titleStart >= 0 && titleEnd > titleStart)
-                {
-                    return html.Substring(titleStart + 7, titleEnd - titleStart - 7);
-                }
-
-                // 尝试提取 h1 标签内容
-                var h1Start = html.IndexOf("<h1>", StringComparison.OrdinalIgnoreCase);
-                var h1End = html.IndexOf("</h1>", StringComparison.OrdinalIgnoreCase);
-                if (h1Start >= 0 && h1End > h1Start)
-                {
-                    return html.Substring(h1Start + 4, h1End - h1Start - 4);
-                }
-
-                return "未知错误";
-            }
-            catch
-            {
-                return "未知错误";
-            }
-        }
-
-        /// <summary>
-        /// 生成二维码
-        /// </summary>
         private async Task<(bool Success, string? Base64, string? ErrorMessage)> GenerateQrCodeAsync(string token)
         {
             try
             {
-                // 生成小程序码 URL
                 var qrUrl = $"campuslink://bind?token={token}";
                 System.Diagnostics.Debug.WriteLine($"[CampusLink] 二维码内容: {qrUrl}");
 
-                // 使用 QRCodeService 生成二维码
                 var result = _qrCodeService.GenerateQRCodeBase64(qrUrl);
 
                 if (!result.Success || string.IsNullOrEmpty(result.Base64))
@@ -841,7 +802,6 @@ namespace Nexus.ViewModels
                     return (false, null, result.ErrorMessage ?? "生成二维码失败");
                 }
 
-                // 转换为 Avalonia Bitmap
                 var imageBytes = Convert.FromBase64String(result.Base64);
                 using var stream = new MemoryStream(imageBytes);
                 QrCodeImage = new Avalonia.Media.Imaging.Bitmap(stream);
@@ -862,7 +822,7 @@ namespace Nexus.ViewModels
         {
             if (_isDisposed) return;
 
-            _httpClient.Dispose();
+            _httpService.Dispose();
             _qrCodeService.Dispose();
             _socketIOService.Dispose();
 
@@ -879,6 +839,13 @@ namespace Nexus.ViewModels
         ShowQrCode,
         VerifySuccess,
         BindSuccess,
+        ScheduleIncomplete,
         Error
+    }
+
+    public class BindTokenData
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("token")]
+        public string? Token { get; set; }
     }
 }

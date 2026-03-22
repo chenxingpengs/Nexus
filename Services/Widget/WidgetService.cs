@@ -7,6 +7,7 @@ using Nexus.Models.Attendance;
 using Nexus.Services;
 using Nexus.Services.Attendance;
 using Nexus.Views.Widget;
+using Nexus.ViewModels.Widget.Cards;
 
 namespace Nexus.Services.Widget
 {
@@ -23,11 +24,11 @@ namespace Nexus.Services.Widget
         
         public event EventHandler<WeatherCardModel>? WeatherUpdated;
         public event EventHandler<ShortcutCardModel>? ShortcutUpdated;
-        public event EventHandler<AttendanceCardModel>? AttendanceUpdated;
+        public event EventHandler<AttendanceCardViewModel>? AttendanceUpdated;
         
         public WeatherCardModel? WeatherData { get; private set; }
         public AnnouncementCardModel? AnnouncementData { get; private set; }
-        public AttendanceCardModel? AttendanceData { get; private set; }
+        public AttendanceCardViewModel? AttendanceViewModel { get; private set; }
         public ShortcutCardModel? ShortcutData { get; private set; }
 
         public WidgetService(ConfigService configService, SocketIOService? socketIOService = null)
@@ -38,14 +39,14 @@ namespace Nexus.Services.Widget
             _shortcutService = new ShortcutService();
             _socketIOService = socketIOService;
             
+            _attendanceService = new AttendanceService(configService);
+            _attendanceService.AttendanceDataUpdated += OnAttendanceDataUpdated;
+            _attendanceService.TimeSlotChanged += OnTimeSlotChanged;
+            _attendanceService.LeaveAttendanceTime += OnLeaveAttendanceTime;
+            _attendanceService.ErrorOccurred += OnAttendanceError;
+            
             if (_socketIOService != null)
             {
-                _attendanceService = new AttendanceService(configService);
-                _attendanceService.AttendanceDataUpdated += OnAttendanceDataUpdated;
-                _attendanceService.TimeSlotChanged += OnTimeSlotChanged;
-                _attendanceService.LeaveAttendanceTime += OnLeaveAttendanceTime;
-                _attendanceService.ErrorOccurred += OnAttendanceError;
-                
                 _socketIOService.AttendanceUpdated += OnWebSocketAttendanceUpdate;
             }
             
@@ -71,26 +72,56 @@ namespace Nexus.Services.Widget
 
         private void OnAttendanceDataUpdated(object? sender, AttendanceData data)
         {
-            if (AttendanceData == null) return;
+            if (AttendanceViewModel == null) return;
 
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                AttendanceData.UpdateFromAttendanceData(data);
+                AttendanceViewModel.UpdateFromAttendanceData(data);
                 UpdateAttendanceVisibility(data);
-                AttendanceUpdated?.Invoke(this, AttendanceData);
-                _widgetWindow?.UpdateAttendanceData(AttendanceData);
+                AttendanceUpdated?.Invoke(this, AttendanceViewModel);
+                _widgetWindow?.UpdateAttendanceData(AttendanceViewModel);
             });
         }
 
         private void OnTimeSlotChanged(object? sender, TimeSlot slot)
         {
             Debug.WriteLine($"[WidgetService] 时段变化: {slot.Name}");
+            
+            if (_attendanceService != null)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        Debug.WriteLine($"[WidgetService] 时段变化，获取考勤数据");
+                        await _attendanceService.GetCurrentAttendanceAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[WidgetService] 获取考勤数据失败: {ex.Message}");
+                    }
+                });
+            }
+            
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (_widgetWindow == null) return;
+                
+                if (!_userManuallyShownAttendance)
+                {
+                    Debug.WriteLine($"[WidgetService] 自动显示考勤卡片");
+                    _widgetWindow.SetAttendanceCardVisibility(true);
+                }
+            });
         }
 
         private void OnLeaveAttendanceTime(object? sender, EventArgs e)
         {
             Debug.WriteLine("[WidgetService] 离开考勤时段");
-            UpdateAttendanceVisibility(null);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                UpdateAttendanceVisibility(null);
+            });
         }
 
         private void OnAttendanceError(object? sender, string error)
@@ -159,9 +190,10 @@ namespace Nexus.Services.Widget
 
         public async Task InitializeAsync()
         {
+            Debug.WriteLine("[WidgetService] InitializeAsync 开始");
             WeatherData = await _weatherService.GetInitialDataAsync();
             AnnouncementData = new AnnouncementCardModel();
-            AttendanceData = new AttendanceCardModel();
+            AttendanceViewModel = new AttendanceCardViewModel(new AttendanceCardModel(), _attendanceService);
             
             ShortcutData = new ShortcutCardModel();
             RefreshShortcutData();
@@ -169,11 +201,22 @@ namespace Nexus.Services.Widget
             if (_attendanceService != null)
             {
                 var classId = _configService.GetClassId();
+                Debug.WriteLine($"[WidgetService] _attendanceService 不为 null, classId={classId}");
                 if (classId > 0)
                 {
+                    Debug.WriteLine($"[WidgetService] 调用 _attendanceService.InitializeAsync({classId})");
                     await _attendanceService.InitializeAsync(classId);
                 }
+                else
+                {
+                    Debug.WriteLine("[WidgetService] classId <= 0, 跳过初始化");
+                }
             }
+            else
+            {
+                Debug.WriteLine("[WidgetService] _attendanceService 为 null!");
+            }
+            Debug.WriteLine("[WidgetService] InitializeAsync 完成");
         }
 
         private void RefreshShortcutData()

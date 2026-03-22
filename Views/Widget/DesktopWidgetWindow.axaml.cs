@@ -7,6 +7,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Nexus.Models.Widget;
 using Nexus.Services.Widget;
+using Nexus.ViewModels.Widget.Cards;
 
 namespace Nexus.Views.Widget
 {
@@ -93,9 +94,9 @@ namespace Nexus.Views.Widget
             {
                 AnnouncementCard.DataContext = _widgetService.AnnouncementData;
             }
-            if (_widgetService.AttendanceData != null && AttendanceCard != null)
+            if (_widgetService.AttendanceViewModel != null && AttendanceCard != null)
             {
-                AttendanceCard.DataContext = _widgetService.AttendanceData;
+                AttendanceCard.DataContext = _widgetService.AttendanceViewModel;
             }
         }
 
@@ -241,11 +242,11 @@ namespace Nexus.Views.Widget
             }
         }
 
-        public void UpdateAttendanceData(AttendanceCardModel data)
+        public void UpdateAttendanceData(AttendanceCardViewModel viewModel)
         {
             if (AttendanceCard != null)
             {
-                AttendanceCard.DataContext = data;
+                AttendanceCard.DataContext = viewModel;
             }
         }
 

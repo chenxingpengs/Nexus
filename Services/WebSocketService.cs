@@ -37,29 +37,49 @@ namespace Nexus.Services
             string deviceId,
             int maxRetries = 3)
         {
-            return await ErrorHandlingService.ExecuteAsync(async () =>
+            int attempts = 0;
+            Exception? lastException = null;
+
+            while (attempts <= maxRetries)
             {
-                if (_webSocket?.State == WebSocketState.Open)
+                try
                 {
-                    await DisconnectAsync();
+                    if (_webSocket?.State == WebSocketState.Open)
+                    {
+                        await DisconnectAsync();
+                    }
+
+                    _cancellationTokenSource = new CancellationTokenSource();
+                    _webSocket = new ClientWebSocket();
+
+                    string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
+                    string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
+                    string wsUrl = $"{wsBaseUrl}/desktop/bind?token={Uri.EscapeDataString(token)}&device_id={Uri.EscapeDataString(deviceId)}";
+
+                    System.Diagnostics.Debug.WriteLine($"[WebSocket] 连接 URL: {wsUrl}");
+
+                    await _webSocket.ConnectAsync(new Uri(wsUrl), _cancellationTokenSource.Token);
+
+                    Connected?.Invoke(this, EventArgs.Empty);
+
+                    _ = ReceiveMessagesAsync();
+                    
+                    return (true, null);
                 }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    attempts++;
+                    System.Diagnostics.Debug.WriteLine($"[WebSocket] 连接失败 (尝试 {attempts}/{maxRetries + 1}): {ex.Message}");
+                    
+                    if (attempts <= maxRetries)
+                    {
+                        await Task.Delay(1000 * attempts);
+                    }
+                }
+            }
 
-                _cancellationTokenSource = new CancellationTokenSource();
-                _webSocket = new ClientWebSocket();
-
-                // 将 http/https 转换为 ws/wss
-                string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
-                string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
-                string wsUrl = $"{wsBaseUrl}/desktop/bind?token={Uri.EscapeDataString(token)}&device_id={Uri.EscapeDataString(deviceId)}";
-
-                System.Diagnostics.Debug.WriteLine($"[WebSocket] 连接 URL: {wsUrl}");
-
-                await _webSocket.ConnectAsync(new Uri(wsUrl), _cancellationTokenSource.Token);
-
-                Connected?.Invoke(this, EventArgs.Empty);
-
-                _ = ReceiveMessagesAsync();
-            }, "WebSocket连接", maxRetries);
+            return (false, lastException?.Message ?? "WebSocket连接失败");
         }
 
         /// <summary>

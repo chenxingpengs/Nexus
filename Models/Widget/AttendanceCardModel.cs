@@ -189,6 +189,8 @@ namespace Nexus.Models.Widget
 
         public bool ShowNonAttendanceMessage => !IsAttendanceTime && ScheduleId == 0;
 
+        public bool ShowNoScheduleMessage => IsAttendanceTime && ScheduleId == 0 && string.IsNullOrEmpty(SpecialStatus);
+
         public bool ShowCancelledMessage => SpecialStatus == "cancelled";
 
         public bool ShowReplacedMessage => SpecialStatus == "replaced";
@@ -245,6 +247,7 @@ namespace Nexus.Models.Widget
             OnPropertyChanged(nameof(ProgressWidth));
             OnPropertyChanged(nameof(AttendanceRateDisplay));
             OnPropertyChanged(nameof(ShowNonAttendanceMessage));
+            OnPropertyChanged(nameof(ShowNoScheduleMessage));
             OnPropertyChanged(nameof(ShowCancelledMessage));
             OnPropertyChanged(nameof(ShowReplacedMessage));
             OnPropertyChanged(nameof(ShowMakeupMessage));

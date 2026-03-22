@@ -79,6 +79,7 @@ namespace Nexus.ViewModels.Widget.Cards
 
         public bool ShowAttendanceData => _model.ScheduleId > 0 && string.IsNullOrEmpty(_model.SpecialStatus);
         public bool ShowNonAttendanceMessage => !_model.IsAttendanceTime && _model.ScheduleId == 0;
+        public bool ShowNoScheduleMessage => _model.IsAttendanceTime && _model.ScheduleId == 0 && string.IsNullOrEmpty(_model.SpecialStatus);
         public bool ShowCancelledMessage => _model.SpecialStatus == "cancelled";
         public bool ShowReplacedMessage => _model.SpecialStatus == "replaced";
         public bool ShowMakeupMessage => _model.SpecialStatus == "makeup";
@@ -154,6 +155,7 @@ namespace Nexus.ViewModels.Widget.Cards
             OnPropertyChanged(nameof(StatusColor));
             OnPropertyChanged(nameof(ShowAttendanceData));
             OnPropertyChanged(nameof(ShowNonAttendanceMessage));
+            OnPropertyChanged(nameof(ShowNoScheduleMessage));
             OnPropertyChanged(nameof(ShowCancelledMessage));
             OnPropertyChanged(nameof(ShowReplacedMessage));
             OnPropertyChanged(nameof(ShowMakeupMessage));

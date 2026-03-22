@@ -8,10 +8,6 @@
         WindowStartupLocation="CenterScreen"
         Background="#F5F5F5">
 
-    <Window.DataContext>
-        <vm:MainWindowViewModel />
-    </Window.DataContext>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -155,8 +151,55 @@
                         </StackPanel>
                     </Border>
                     
+                    <Panel IsVisible="{Binding IsShowScheduleIncomplete}">
+                        <Border Background="#FFF3E0" CornerRadius="12" Padding="20" 
+                                BorderBrush="#FF9800" BorderThickness="1" HorizontalAlignment="Center" MaxWidth="450">
+                            <StackPanel Spacing="15">
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE7BA;" FontSize="20" Foreground="#FF9800" 
+                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <TextBlock Text="排班配置不完整" FontSize="18" FontWeight="SemiBold" 
+                                               Foreground="#E65100" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                
+                                <TextBlock TextAlignment="Center" FontSize="14" Foreground="#666666" TextWrapping="Wrap">
+                                    <Run Text="当前班级有"/>
+                                    <Run Text="{Binding MissingSlotsCount}" FontWeight="Bold" Foreground="#FF9800"/>
+                                    <Run Text="个时段未配置排班，共"/>
+                                    <Run Text="{Binding TotalSlotsCount}" FontWeight="Bold"/>
+                                    <Run Text="个时段"/>
+                                </TextBlock>
+                                
+                                <TextBlock Text="建议现在配置周期性排班，否则考勤功能可能无法正常使用"
+                                           FontSize="12" Foreground="#888888" TextAlignment="Center" TextWrapping="Wrap"/>
+                                
+                                <StackPanel Spacing="10" Margin="0,10,0,0">
+                                    <Button Command="{Binding OpenScheduleSetupCommand}"
+                                            Width="280" Height="45" FontSize="15" CornerRadius="8"
+                                            Background="#FF9800" Foreground="#FFFFFF"
+                                            HorizontalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="&#xE8FD;" FontSize="16" FontFamily="Segoe MDL2 Assets" 
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Text="立即配置周期性排班" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button Command="{Binding ContinueWithoutScheduleCommand}"
+                                            Width="280" Height="40" FontSize="14" CornerRadius="8"
+                                            Background="Transparent" Foreground="#888888"
+                                            BorderBrush="#E0E0E0" BorderThickness="1"
+                                            HorizontalAlignment="Center">
+                                        <TextBlock Text="稍后配置（可在主菜单-考勤配置中完善）" FontSize="12"/>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Panel>
+                    
                     <TextBlock Text="设备已成功绑定，可以开始使用考勤功能" 
-                               FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+                               FontSize="14" Foreground="#888888" HorizontalAlignment="Center"
+                               IsVisible="{Binding !IsShowScheduleIncomplete}"/>
                 </StackPanel>
             </Panel>
 

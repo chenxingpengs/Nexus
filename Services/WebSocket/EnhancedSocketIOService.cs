@@ -181,49 +181,69 @@ public class EnhancedSocketIOService : IDisposable
         string deviceType = "classroom_terminal",
         int maxRetries = 10)
     {
-        return await ErrorHandlingService.ExecuteAsync(async () =>
+        int attempts = 0;
+        Exception? lastException = null;
+
+        while (attempts <= maxRetries)
         {
-            if (_socket?.Connected == true)
+            try
             {
-                await DisconnectAsync();
-            }
-
-            _cancellationTokenSource = new CancellationTokenSource();
-            _reconnectAttempts = 0;
-            _reconnectStrategy.Reset();
-
-            string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
-            string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
-
-            _currentServerUrl = $"{wsBaseUrl}/desktop/bind";
-
-            Debug.WriteLine($"[EnhancedSocketIO] 连接到: {_currentServerUrl}");
-
-            UpdateConnectionInfo(ConnectionStatus.Connecting, "正在建立WebSocket连接...");
-
-            var options = new SocketIOClient.SocketIOOptions
-            {
-                Path = "/socket.io",
-                Query = new Dictionary<string, string>
+                if (_socket?.Connected == true)
                 {
-                    { "token", token },
-                    { "device_id", deviceId },
-                    { "device_type", deviceType }
-                },
-                Reconnection = true,
-                ReconnectionAttempts = maxRetries,
-                ReconnectionDelay = (int)_reconnectStrategy.GetNextDelay().TotalMilliseconds,
-                ReconnectionDelayMax = (int)_config.ReconnectMaxDelayMs,
-                ConnectionTimeout = _config.ConnectionTimeout,
-            };
+                    await DisconnectAsync();
+                }
 
-            _socket = new SocketIOClient.SocketIO($"{wsBaseUrl}/desktop/bind", options);
+                _cancellationTokenSource = new CancellationTokenSource();
+                _reconnectAttempts = 0;
+                _reconnectStrategy.Reset();
 
-            SetupSocketEvents();
+                string wsScheme = _baseUrl.StartsWith("https") ? "wss" : "ws";
+                string wsBaseUrl = _baseUrl.Replace("http://", $"{wsScheme}://").Replace("https://", $"{wsScheme}://");
 
-            await _socket.ConnectAsync();
+                _currentServerUrl = $"{wsBaseUrl}/desktop/bind";
 
-        }, "EnhancedSocketIO连接", 3);
+                Debug.WriteLine($"[EnhancedSocketIO] 连接到: {_currentServerUrl}");
+
+                UpdateConnectionInfo(ConnectionStatus.Connecting, "正在建立WebSocket连接...");
+
+                var options = new SocketIOClient.SocketIOOptions
+                {
+                    Path = "/socket.io",
+                    Query = new Dictionary<string, string>
+                    {
+                        { "token", token },
+                        { "device_id", deviceId },
+                        { "device_type", deviceType }
+                    },
+                    Reconnection = true,
+                    ReconnectionAttempts = maxRetries,
+                    ReconnectionDelay = (int)_reconnectStrategy.GetNextDelay().TotalMilliseconds,
+                    ReconnectionDelayMax = (int)_config.ReconnectMaxDelayMs,
+                    ConnectionTimeout = _config.ConnectionTimeout,
+                };
+
+                _socket = new SocketIOClient.SocketIO($"{wsBaseUrl}/desktop/bind", options);
+
+                SetupSocketEvents();
+
+                await _socket.ConnectAsync();
+
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                attempts++;
+                Debug.WriteLine($"[EnhancedSocketIO] 连接失败 (尝试 {attempts}/{maxRetries + 1}): {ex.Message}");
+
+                if (attempts <= maxRetries)
+                {
+                    await Task.Delay(1000 * attempts);
+                }
+            }
+        }
+
+        return (false, lastException?.Message ?? "EnhancedSocketIO连接失败");
     }
 
     private void SetupSocketEvents()

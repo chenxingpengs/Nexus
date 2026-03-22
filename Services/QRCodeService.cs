@@ -21,7 +21,8 @@ namespace Nexus.Services
         /// <returns>二维码图片</returns>
         public Bitmap GenerateBasicQRCode(string plainText, int pixelsPerModule = 20)
         {
-            ErrorHandlingService.ValidateNotNullOrEmpty(plainText, nameof(plainText));
+            if (string.IsNullOrWhiteSpace(plainText))
+            throw new ArgumentException("二维码内容不能为空", nameof(plainText));
 
             if (pixelsPerModule < 1 || pixelsPerModule > 100)
             {
@@ -79,7 +80,8 @@ namespace Nexus.Services
         /// <returns>二维码图片</returns>
         public Bitmap GenerateQRCodeWithLogo(string plainText, Bitmap logoImage, int pixelsPerModule = 20)
         {
-            ErrorHandlingService.ValidateNotNullOrEmpty(plainText, nameof(plainText));
+            if (string.IsNullOrWhiteSpace(plainText))
+                throw new ArgumentException("二维码内容不能为空", nameof(plainText));
 
             if (logoImage == null)
             {
@@ -123,14 +125,14 @@ namespace Nexus.Services
             Color lightColor,
             int pixelsPerModule = 20)
         {
-            ErrorHandlingService.ValidateNotNullOrEmpty(plainText, nameof(plainText));
+            if (string.IsNullOrWhiteSpace(plainText))
+                throw new ArgumentException("二维码内容不能为空", nameof(plainText));
 
             try
             {
                 using var qrGenerator = new QRCodeGenerator();
                 using var qrCodeData = qrGenerator.CreateQrCode(plainText, QRCodeGenerator.ECCLevel.Q);
                 using var qrCode = new QRCode(qrCodeData);
-                // 使用命名参数避免歧义，明确指定 drawQuietZones 参数
                 var qrCodeImage = qrCode.GetGraphic(
                     pixelsPerModule: pixelsPerModule,
                     darkColor: darkColor,

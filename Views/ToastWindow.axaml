@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Nexus.Views.ToastWindow"
+        Width="320" Height="80"
+        WindowStartupLocation="Manual"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Topmost="True">
+
+    <Border x:Name="ToastContainer"
+            CornerRadius="8"
+            Padding="16,12"
+            Background="#F44336">
+        <Grid ColumnDefinitions="Auto,*">
+            <TextBlock x:Name="IconText"
+                       Grid.Column="0"
+                       FontSize="20"
+                       Foreground="White"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0"
+                       Text="X"/>
+            
+            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                <TextBlock x:Name="TitleText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Text="Error"/>
+                <TextBlock x:Name="MessageText"
+                           FontSize="12"
+                           Foreground="White"
+                           TextWrapping="Wrap"
+                           Text="Message"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

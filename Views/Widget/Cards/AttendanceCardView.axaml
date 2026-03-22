@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:model="clr-namespace:Nexus.Models.Widget"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Widget.Cards"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
              x:Class="Nexus.Views.Widget.Cards.AttendanceCardView"
-             x:DataType="model:AttendanceCardModel">
+             x:DataType="vm:AttendanceCardViewModel">
 
     <Border Background="#F5F5F5"
             CornerRadius="12"
@@ -11,7 +11,7 @@
             BorderBrush="#1A000000"
             BorderThickness="1">
         
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
             
             <!-- 标题栏 -->
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
@@ -32,10 +32,46 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Margin="8,0"/>
+                
+                <!-- 刷新按钮 -->
+                <Button Grid.Column="2"
+                        Command="{Binding RefreshDataCommand}"
+                        IsVisible="{Binding !IsLoading}"
+                        Background="Transparent"
+                        Padding="4">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Refresh}" FontSize="16" Foreground="#757575"/>
+                </Button>
             </Grid>
             
-            <!-- 状态标签 -->
+            <!-- 时段选择器 -->
             <Border Grid.Row="1"
+                    Background="#E3F2FD"
+                    CornerRadius="6"
+                    Padding="8,6"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding HasMultipleTimeSlots}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Text="时段:" 
+                               FontSize="12" 
+                               Foreground="#1976D2"
+                               VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding TimeSlots}"
+                              SelectedItem="{Binding SelectedTimeSlot}"
+                              HorizontalAlignment="Stretch"
+                              Margin="8,0"
+                              Padding="8,4">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontSize="12"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+            </Border>
+            
+            <!-- 状态标签 -->
+            <Border Grid.Row="2"
                     Background="{Binding StatusColor}"
                     CornerRadius="4"
                     Padding="8,4"
@@ -48,7 +84,7 @@
             </Border>
             
             <!-- 非考勤时段提示 -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Background="#FFFFFF"
                     CornerRadius="8"
                     Padding="16,20"
@@ -67,8 +103,31 @@
                 </StackPanel>
             </Border>
             
+            <!-- 无排班记录提示 -->
+            <Border Grid.Row="3"
+                    Background="#FFF8E1"
+                    CornerRadius="8"
+                    Padding="16,20"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding ShowNoScheduleMessage}">
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="32" Foreground="#FF9800"/>
+                    <TextBlock Text="无排班记录"
+                               FontSize="16"
+                               FontWeight="Medium"
+                               Foreground="#FF9800"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding Message}"
+                               FontSize="12"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="200"/>
+                </StackPanel>
+            </Border>
+            
             <!-- 停课提示 -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Background="#FFEBEE"
                     CornerRadius="8"
                     Padding="16,20"
@@ -91,7 +150,7 @@
             </Border>
             
             <!-- 调课提示 -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Background="#FFF3E0"
                     CornerRadius="8"
                     Padding="16,20"
@@ -114,7 +173,7 @@
             </Border>
             
             <!-- 补课提示 -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Background="#E3F2FD"
                     CornerRadius="8"
                     Padding="16,20"
@@ -137,7 +196,7 @@
             </Border>
             
             <!-- 正常考勤数据 -->
-            <Border Grid.Row="2" 
+            <Border Grid.Row="3" 
                     Background="#FFFFFF" 
                     CornerRadius="8" 
                     Padding="16,12"
@@ -164,7 +223,7 @@
             </Border>
             
             <!-- 统计数据 -->
-            <Grid Grid.Row="3" 
+            <Grid Grid.Row="4" 
                   ColumnDefinitions="*,*" 
                   RowDefinitions="Auto,Auto" 
                   Margin="0,0,0,0"
