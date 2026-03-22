@@ -16,12 +16,21 @@ if "%VERSION%"=="" (
 echo.
 echo Version: %VERSION%
 echo.
+set UPLOAD_GITHUB=
 set /p UPLOAD_GITHUB="Upload to GitHub? (Y/N): "
-if /i "%UPLOAD_GITHUB%"=="Y" (
-    set DO_UPLOAD=1
-) else (
-    set DO_UPLOAD=0
-)
+
+set DO_UPLOAD=0
+if /i "%UPLOAD_GITHUB%"=="Y" set DO_UPLOAD=1
+
+if "%DO_UPLOAD%"=="1" goto :input_notes
+goto :skip_notes
+
+:input_notes
+echo.
+echo Enter release notes (press Enter to use default template):
+set /p RELEASE_NOTES="> "
+
+:skip_notes
 
 set OUTPUT_DIR=Output
 set PUBLISH_DIR=bin\Release\net8.0-windows\win-x64\publish
@@ -100,6 +109,14 @@ if "%DO_UPLOAD%"=="1" (
     
     cd /d "%~dp0"
     
+    echo Pulling latest changes...
+    git pull origin main --rebase
+    if %errorlevel% neq 0 (
+        echo Pull failed! Please resolve conflicts manually.
+        pause
+        exit /b 1
+    )
+    
     git add -A
     git status
     
@@ -119,16 +136,13 @@ if "%DO_UPLOAD%"=="1" (
     )
     
     echo Creating GitHub Release...
-    gh release create v%VERSION% "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.exe" "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.zip" --title "Nexus v%VERSION%" --notes "## Nexus v%VERSION% Release
-
-### Download
-- **Nexus-%VERSION%-win-x64.exe** - Installer (Recommended)
-- **Nexus-%VERSION%-win-x64.zip** - Portable version
-
-### System Requirements
-- Windows x64
-- .NET 8.0 Runtime (self-contained, no need to install separately)
-"
+    if "%RELEASE_NOTES%"=="" (
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-Content 'release-notes.md' -Raw) -replace 'VERSION_PLACEHOLDER', '%VERSION%' | Set-Content 'release-notes-temp.md' -NoNewline"
+        gh release create v%VERSION% "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.exe" "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.zip" --title "Nexus v%VERSION%" --notes-file "release-notes-temp.md"
+        del /f /q "release-notes-temp.md"
+    ) else (
+        gh release create v%VERSION% "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.exe" "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.zip" --title "Nexus v%VERSION%" --notes "%RELEASE_NOTES%"
+    )
 
     if %errorlevel% neq 0 (
         echo GitHub Release creation failed! Please check if the release already exists.

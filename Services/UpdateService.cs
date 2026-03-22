@@ -106,6 +106,15 @@ public class UpdateService : HttpService
                 return null;
             }
 
+            // 检查返回内容是否为有效 JSON
+            var trimmedContent = content.TrimStart();
+            if (!trimmedContent.StartsWith("{") && !trimmedContent.StartsWith("["))
+            {
+                Debug.WriteLine($"[UpdateService] GitHub API 返回非 JSON 内容: {content.Substring(0, Math.Min(200, content.Length))}...");
+                StatusChanged?.Invoke(UpdateStatus.Error, "GitHub API 返回异常，可能触发了速率限制");
+                return null;
+            }
+
             var release = JsonSerializer.Deserialize<GitHubRelease>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
