@@ -83,6 +83,8 @@ namespace Nexus.ViewModels
                     OnPropertyChanged(nameof(IsShowBindSuccess));
                     OnPropertyChanged(nameof(IsShowError));
                     OnPropertyChanged(nameof(IsShowScheduleIncomplete));
+                    OnPropertyChanged(nameof(IsShowSelectBindMode));
+                    OnPropertyChanged(nameof(IsShowAuthorizationPending));
                 }
             }
         }
@@ -93,6 +95,8 @@ namespace Nexus.ViewModels
         public bool IsShowBindSuccess => BindState == BindState.BindSuccess || BindState == BindState.ScheduleIncomplete;
         public bool IsShowError => BindState == BindState.Error;
         public bool IsShowScheduleIncomplete => BindState == BindState.ScheduleIncomplete;
+        public bool IsShowSelectBindMode => BindState == BindState.SelectBindMode;
+        public bool IsShowAuthorizationPending => BindState == BindState.AuthorizationPending;
 
         private string _verifyUserName = string.Empty;
         public string VerifyUserName
@@ -142,6 +146,31 @@ namespace Nexus.ViewModels
             get => _errorMessage;
             set => SetProperty(ref _errorMessage, value);
         }
+
+        private string _authorizationRequestId = string.Empty;
+        public string AuthorizationRequestId
+        {
+            get => _authorizationRequestId;
+            set => SetProperty(ref _authorizationRequestId, value);
+        }
+
+        private int _authorizationExpiresInSeconds;
+        public int AuthorizationExpiresInSeconds
+        {
+            get => _authorizationExpiresInSeconds;
+            set => SetProperty(ref _authorizationExpiresInSeconds, value);
+        }
+
+        private string _authorizationCountdown = string.Empty;
+        public string AuthorizationCountdown
+        {
+            get => _authorizationCountdown;
+            set => SetProperty(ref _authorizationCountdown, value);
+        }
+
+        private DateTime _authorizationStartTime;
+        private int _authorizationTotalSeconds;
+        private Avalonia.Threading.DispatcherTimer? _countdownTimer;
 
         private bool _isWebSocketConnected = false;
         public bool IsWebSocketConnected
@@ -301,6 +330,8 @@ namespace Nexus.ViewModels
         public ICommand RetryCommand { get; }
         public ICommand OpenScheduleSetupCommand { get; }
         public ICommand ContinueWithoutScheduleCommand { get; }
+        public ICommand SelectQrCodeBindCommand { get; }
+        public ICommand SelectAuthorizationBindCommand { get; }
 
         #endregion
 
@@ -352,23 +383,10 @@ namespace Nexus.ViewModels
             OpenScheduleSetupCommand = new RelayCommand(OnOpenScheduleSetup);
             ContinueWithoutScheduleCommand = new RelayCommand(OnContinueWithoutSchedule);
 
-            if (!string.IsNullOrEmpty(_configService.Config.DeviceId))
-            {
-                DeviceId = _configService.Config.DeviceId;
-            }
-            else
-            {
-                _configService.SetDeviceInfo(DeviceId, DeviceName);
-            }
+            SelectQrCodeBindCommand = new AsyncRelayCommand(RefreshToken);
+            SelectAuthorizationBindCommand = new AsyncRelayCommand(StartAuthorizationBind);
 
-            if (!string.IsNullOrEmpty(_configService.Config.DeviceType))
-            {
-                DeviceType = _configService.Config.DeviceType;
-            }
-
-            AppVersion = _configService.Config.AppVersion ?? GetAppVersion();
-
-            _ = RefreshToken();
+            BindState = BindState.SelectBindMode;
         }
 
         private string GetAppVersion()
@@ -814,6 +832,153 @@ namespace Nexus.ViewModels
             }
         }
 
+        public async Task StartAuthorizationBind()
+        {
+            BindState = BindState.Loading;
+            StatusMessage = "正在发起授权请求...";
+
+            var (deviceId, macAddress, ipAddress) = DeviceIdentifier.GetDeviceInfo();
+            DeviceId = deviceId;
+
+            var authService = new AuthService(_configService, _toastService);
+            var (success, data, error, alreadyBound) = await authService.CreateBindRequestAsync(DeviceName, "通过管理员授权绑定");
+
+            if (alreadyBound)
+            {
+                _toastService.ShowInfo("设备已绑定，正在验证...");
+                var (verifySuccess, verifyError) = await authService.VerifyDeviceAsync();
+                if (verifySuccess)
+                {
+                    BindClassName = _configService.Config.BindInfo?.ClassName ?? "";
+                    BindClassId = _configService.Config.BindInfo?.ClassId ?? 0;
+                    BindState = BindState.BindSuccess;
+                    StatusMessage = "设备已绑定";
+                    await Task.Delay(1000);
+                    BindSuccessAndReady?.Invoke();
+                }
+                else
+                {
+                    BindState = BindState.Error;
+                    ErrorMessage = verifyError ?? "设备验证失败";
+                    StatusMessage = ErrorMessage;
+                    _toastService.ShowError(ErrorMessage);
+                }
+                return;
+            }
+
+            if (!success || data == null)
+            {
+                BindState = BindState.Error;
+                ErrorMessage = error ?? "发起授权请求失败";
+                StatusMessage = ErrorMessage;
+                _toastService.ShowError(ErrorMessage);
+                return;
+            }
+
+            AuthorizationRequestId = data.RequestId;
+            AuthorizationExpiresInSeconds = data.ExpiresInSeconds;
+            BindState = BindState.AuthorizationPending;
+            StatusMessage = "等待管理员授权...";
+
+            _ = PollAuthorizationStatus(authService, data.RequestId, data.ExpiresInSeconds);
+        }
+
+        private async Task PollAuthorizationStatus(AuthService authService, string requestId, int expiresInSeconds)
+        {
+            var startTime = DateTime.Now;
+            var pollInterval = TimeSpan.FromSeconds(30);
+
+            _authorizationStartTime = startTime;
+            _authorizationTotalSeconds = expiresInSeconds;
+
+            _countdownTimer = new Avalonia.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _countdownTimer.Tick += (s, e) =>
+            {
+                var remaining = _authorizationTotalSeconds - (int)(DateTime.Now - _authorizationStartTime).TotalSeconds;
+                if (remaining <= 0)
+                {
+                    _countdownTimer.Stop();
+                    AuthorizationCountdown = "已过期";
+                }
+                else
+                {
+                    AuthorizationCountdown = $"{remaining / 60}分{remaining % 60}秒";
+                }
+            };
+            _countdownTimer.Start();
+
+            while ((DateTime.Now - startTime).TotalSeconds < expiresInSeconds)
+            {
+                await Task.Delay(pollInterval);
+
+                var (success, data, error) = await authService.CheckAuthorizationStatusAsync(requestId);
+
+                if (!success || data == null)
+                {
+                    continue;
+                }
+
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    switch (data.Status)
+                    {
+                        case "authorized":
+                            BindClassName = data.ClassName ?? "";
+                            BindClassId = data.ClassId;
+                            StatusMessage = "授权成功！";
+                            
+                            await Task.Delay(1000);
+                            
+                            var completeness = await _scheduleService.CheckCompletenessAsync(BindClassId);
+                            if (completeness == null || !completeness.IsComplete)
+                            {
+                                BindState = BindState.ScheduleIncomplete;
+                                MissingSlots = completeness?.MissingSlots ?? new List<MissingSlotModel>();
+                                MissingSlotsCount = MissingSlots.Count;
+                                TotalSlotsCount = completeness?.FixedTimeSlots?.Count * 5 ?? 0;
+                            }
+                            else
+                            {
+                                BindState = BindState.BindSuccess;
+                                await Task.Delay(1500);
+                                BindSuccessAndReady?.Invoke();
+                            }
+                            break;
+
+                        case "rejected":
+                            BindState = BindState.Error;
+                            ErrorMessage = data.RejectReason ?? "授权被拒绝";
+                            StatusMessage = ErrorMessage;
+                            break;
+
+                        case "expired":
+                            BindState = BindState.Error;
+                            ErrorMessage = "授权请求已过期";
+                            StatusMessage = ErrorMessage;
+                            break;
+                    }
+                });
+
+                if (data.Status == "authorized" || data.Status == "rejected" || data.Status == "expired")
+                {
+                    _countdownTimer?.Stop();
+                    return;
+                }
+            }
+
+            _countdownTimer?.Stop();
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                BindState = BindState.Error;
+                ErrorMessage = "授权请求已过期";
+                StatusMessage = ErrorMessage;
+            });
+        }
+
         #endregion
 
         #region IDisposable
@@ -822,6 +987,7 @@ namespace Nexus.ViewModels
         {
             if (_isDisposed) return;
 
+            _countdownTimer?.Stop();
             _httpService.Dispose();
             _qrCodeService.Dispose();
             _socketIOService.Dispose();
@@ -836,7 +1002,9 @@ namespace Nexus.ViewModels
     public enum BindState
     {
         Loading,
+        SelectBindMode,
         ShowQrCode,
+        AuthorizationPending,
         VerifySuccess,
         BindSuccess,
         ScheduleIncomplete,

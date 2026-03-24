@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Nexus.Models.Widget;
 using Nexus.Models.Attendance;
 using Nexus.Services.Attendance;
+using Nexus.Views.Widget;
 
 namespace Nexus.ViewModels.Widget.Cards
 {
@@ -15,6 +16,7 @@ namespace Nexus.ViewModels.Widget.Cards
     {
         private readonly AttendanceCardModel _model;
         private readonly AttendanceService? _attendanceService;
+        private readonly Services.ConfigService? _configService;
 
         [ObservableProperty]
         private bool _isLoading;
@@ -29,6 +31,8 @@ namespace Nexus.ViewModels.Widget.Cards
         private bool _showTimeSlotSelector;
 
         private TimeSlot? _selectedTimeSlot;
+        private int _userSelectedTimeSlotId;
+
         public TimeSlot? SelectedTimeSlot
         {
             get => _selectedTimeSlot;
@@ -41,10 +45,11 @@ namespace Nexus.ViewModels.Widget.Cards
             }
         }
 
-        public AttendanceCardViewModel(AttendanceCardModel model, AttendanceService? attendanceService = null)
+        public AttendanceCardViewModel(AttendanceCardModel model, AttendanceService? attendanceService = null, Services.ConfigService? configService = null)
         {
             _model = model;
             _attendanceService = attendanceService;
+            _configService = configService;
 
             if (_attendanceService != null)
             {
@@ -77,7 +82,7 @@ namespace Nexus.ViewModels.Widget.Cards
         public string StatusColor => _model.StatusColor;
         public ObservableCollection<TimeSlot> TimeSlots { get; } = new();
 
-        public bool ShowAttendanceData => _model.ScheduleId > 0 && string.IsNullOrEmpty(_model.SpecialStatus);
+        public bool ShowAttendanceData => _model.ScheduleId > 0 && (string.IsNullOrEmpty(_model.SpecialStatus) || _model.SpecialStatus == "makeup");
         public bool ShowNonAttendanceMessage => !_model.IsAttendanceTime && _model.ScheduleId == 0;
         public bool ShowNoScheduleMessage => _model.IsAttendanceTime && _model.ScheduleId == 0 && string.IsNullOrEmpty(_model.SpecialStatus);
         public bool ShowCancelledMessage => _model.SpecialStatus == "cancelled";
@@ -88,19 +93,32 @@ namespace Nexus.ViewModels.Widget.Cards
 
         private void UpdateSelectedTimeSlot()
         {
-            SelectedTimeSlotName = _model.TimeSlotName;
-            SelectedTimeSlotId = _model.TimeSlotId;
-
             TimeSlots.Clear();
             foreach (var slot in _model.TimeSlots)
             {
                 TimeSlots.Add(slot);
             }
 
-            if (_model.TimeSlotId > 0)
+            int effectiveTimeSlotId = _userSelectedTimeSlotId > 0 
+                ? _userSelectedTimeSlotId 
+                : _model.TimeSlotId;
+
+            if (effectiveTimeSlotId > 0)
             {
-                _selectedTimeSlot = _model.TimeSlots.FirstOrDefault(t => t.Id == _model.TimeSlotId);
+                SelectedTimeSlotName = TimeSlots.FirstOrDefault(t => t.Id == effectiveTimeSlotId)?.Name ?? _model.TimeSlotName;
+                SelectedTimeSlotId = effectiveTimeSlotId;
+                _selectedTimeSlot = TimeSlots.FirstOrDefault(t => t.Id == effectiveTimeSlotId);
                 OnPropertyChanged(nameof(SelectedTimeSlot));
+            }
+            else
+            {
+                SelectedTimeSlotName = _model.TimeSlotName;
+                SelectedTimeSlotId = _model.TimeSlotId;
+                if (_model.TimeSlotId > 0)
+                {
+                    _selectedTimeSlot = TimeSlots.FirstOrDefault(t => t.Id == _model.TimeSlotId);
+                    OnPropertyChanged(nameof(SelectedTimeSlot));
+                }
             }
 
             OnPropertyChanged(nameof(HasMultipleTimeSlots));
@@ -179,6 +197,7 @@ namespace Nexus.ViewModels.Widget.Cards
         {
             if (_attendanceService == null || IsLoading) return;
 
+            _userSelectedTimeSlotId = 0;
             IsLoading = true;
             try
             {
@@ -195,6 +214,7 @@ namespace Nexus.ViewModels.Widget.Cards
         {
             if (_attendanceService == null || timeSlotId == SelectedTimeSlotId) return;
 
+            _userSelectedTimeSlotId = timeSlotId;
             IsLoading = true;
             try
             {
@@ -211,6 +231,47 @@ namespace Nexus.ViewModels.Widget.Cards
         {
             if (ScheduleId <= 0) return;
             Debug.WriteLine($"[AttendanceCardViewModel] 打开考勤详情: ScheduleId={ScheduleId}");
+        }
+
+        [RelayCommand]
+        private void OpenAttendancePage()
+        {
+            if (ScheduleId <= 0 || _configService == null) return;
+            
+            Debug.WriteLine($"[AttendanceCardViewModel] 打开考勤详情窗口: ScheduleId={ScheduleId}");
+            
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+            {
+                var viewModel = new AttendanceDetailViewModel(_configService, ScheduleId);
+                var window = new AttendanceDetailWindow
+                {
+                    DataContext = viewModel
+                };
+                
+                viewModel.Saved += async (s, e) =>
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    {
+                        window.Close();
+                    });
+                    
+                    if (_attendanceService != null)
+                    {
+                        await _attendanceService.RefreshAsync();
+                    }
+                };
+                
+                viewModel.Cancelled += (s, e) =>
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    {
+                        window.Close();
+                    });
+                };
+                
+                window.Show();
+                await viewModel.LoadDataAsync();
+            });
         }
 
         public void Cleanup()

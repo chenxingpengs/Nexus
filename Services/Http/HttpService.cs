@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Nexus.Models;
+using Nexus.Services.WebSocket;
 
 namespace Nexus.Services.Http;
 
@@ -70,10 +71,16 @@ public class HttpService : IDisposable
         options ??= RequestOptions.Default;
         var url = BuildUrl(endpoint);
         
-        var attempt = 0;
-        Exception? lastException = null;
-
-        while (attempt <= options.MaxRetries)
+        var maxRetries = options.MaxRetries > 0 ? options.MaxRetries : 3;
+        var backoff = new ExponentialBackoffStrategy(
+            baseDelayMs: 1000,
+            maxDelayMs: 30000,
+            jitter: 0.3,
+            multiplier: 2.0,
+            maxAttempts: maxRetries + 1
+        );
+        
+        while (backoff.CanRetry)
         {
             using var request = CreateRequest(HttpMethod.Get, url, null, options);
             
@@ -82,190 +89,190 @@ public class HttpService : IDisposable
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
                 var response = await HttpClient.SendAsync(request, cts.Token);
                 
-                if (!response.IsSuccessStatusCode && ShouldRetry(response.StatusCode) && attempt < options.MaxRetries)
+                if (!response.IsSuccessStatusCode && ShouldRetry(response.StatusCode))
                 {
-                    attempt++;
-                    await Task.Delay(options.RetryDelayMs * attempt);
+                    var delay = backoff.GetNextDelay();
+                    await Task.Delay(delay);
                     continue;
                 }
                 
                 return await response.Content.ReadAsStringAsync();
             }
-            catch (TaskCanceledException ex)
+            catch (TaskCanceledException)
             {
-                lastException = ex;
-                if (attempt < options.MaxRetries)
+                if (backoff.CanRetry)
                 {
-                    attempt++;
-                    await Task.Delay(options.RetryDelayMs * attempt);
+                    await Task.Delay(backoff.GetNextDelay());
                     continue;
                 }
-                HandleException(ex, options);
                 return null;
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException)
             {
-                lastException = ex;
-                if (attempt < options.MaxRetries)
+                if (backoff.CanRetry)
                 {
-                    attempt++;
-                await Task.Delay(options.RetryDelayMs * attempt);
-                continue;
+                    await Task.Delay(backoff.GetNextDelay());
+                    continue;
                 }
-                HandleException(ex, options);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                HandleException(ex, options);
                 return null;
             }
         }
-
+        
         return null;
     }
 
     private async Task<ApiResponse<T>?> SendAsync<T>(HttpMethod method, string url, object? body, RequestOptions options)
     {
-        var attempt = 0;
+        var maxRetries = options.MaxRetries > 0 ? options.MaxRetries : 3;
+        var backoff = new ExponentialBackoffStrategy(
+            baseDelayMs: 1000,
+            maxDelayMs: 30000,
+            jitter: 0.3,
+            multiplier: 2.0,
+            maxAttempts: maxRetries + 1
+        );
+        
         Exception? lastException = null;
 
-        while (attempt <= options.MaxRetries)
+        while (backoff.CanRetry)
         {
-        using var request = CreateRequest(method, url, body, options);
-        
-        try
-        {
-            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
+            using var request = CreateRequest(method, url, body, options);
             
-            LogRequest(request, options, attempt);
-            
-            var response = await HttpClient.SendAsync(request, cts.Token);
-            var content = await response.Content.ReadAsStringAsync(cts.Token);
-            
-            LogResponse(response, content, options);
-            
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                var errorMsg = GetErrorMessage(response.StatusCode, content);
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
                 
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                LogRequest(request, options, backoff.CurrentAttempt);
+                
+                var response = await HttpClient.SendAsync(request, cts.Token);
+                var content = await response.Content.ReadAsStringAsync(cts.Token);
+                
+                LogResponse(response, content, options);
+                
+                if (!response.IsSuccessStatusCode)
                 {
-                    ToastService?.ShowError("登录已过期，请重新绑定设备");
-                    return new ApiResponse<T> { Code = 401, Msg = errorMsg };
+                    var errorMsg = GetErrorMessage(response.StatusCode, content);
+                    
+                    if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        ToastService?.ShowError("登录已过期，请重新绑定设备");
+                        return new ApiResponse<T> { Code = 401, Msg = errorMsg };
+                    }
+                    
+                    if (ShouldRetry(response.StatusCode))
+                    {
+                        var delay = backoff.GetNextDelay();
+                        Debug.WriteLine($"[HttpService] 重试 {backoff.CurrentAttempt}/{backoff.MaxAttempts}，等待 {delay.TotalSeconds:F1}s");
+                        await Task.Delay(delay);
+                        continue;
+                    }
+                    
+                    if (options.ShowErrorToast)
+                    {
+                        ToastService?.ShowError(errorMsg);
+                    }
+                    
+                    return new ApiResponse<T> { Code = (int)response.StatusCode, Msg = errorMsg };
                 }
                 
-                if (ShouldRetry(response.StatusCode) && attempt < options.MaxRetries)
+                if (string.IsNullOrWhiteSpace(content))
                 {
-                    attempt++;
-                    await Task.Delay(options.RetryDelayMs * attempt);
+                    return new ApiResponse<T> { Code = 200, Msg = "操作成功" };
+                }
+                
+                var result = JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
+                
+                if (result == null)
+                {
+                    if (options.ShowErrorToast)
+                    {
+                        ToastService?.ShowError("数据格式错误");
+                    }
+                    return new ApiResponse<T> { Code = 0, Msg = "数据格式错误" };
+                }
+                
+                if (!result.IsSuccess && options.ShowErrorToast)
+                {
+                    ToastService?.ShowError(result.Msg);
+                }
+                
+                if (result.IsSuccess && options.ShowSuccessToast)
+                {
+                    ToastService?.ShowSuccess(result.Msg);
+                }
+                
+                return result;
+            }
+            catch (TaskCanceledException ex)
+            {
+                lastException = ex;
+                Debug.WriteLine($"[HttpService] 请求超时: {options.OperationName ?? url}");
+                
+                if (backoff.CanRetry)
+                {
+                    var delay = backoff.GetNextDelay();
+                    Debug.WriteLine($"[HttpService] 超时重试 {backoff.CurrentAttempt}/{backoff.MaxAttempts}，等待 {delay.TotalSeconds:F1}s");
+                    await Task.Delay(delay);
                     continue;
                 }
                 
                 if (options.ShowErrorToast)
                 {
+                    ToastService?.ShowError("请求超时，请稍后重试");
+                }
+                
+                return new ApiResponse<T> { Code = 0, Msg = "请求超时" };
+            }
+            catch (HttpRequestException ex)
+            {
+                lastException = ex;
+                Debug.WriteLine($"[HttpService] 网络错误: {ex.Message}");
+                
+                if (backoff.CanRetry)
+                {
+                    var delay = backoff.GetNextDelay();
+                    Debug.WriteLine($"[HttpService] 网络错误重试 {backoff.CurrentAttempt}/{backoff.MaxAttempts}，等待 {delay.TotalSeconds:F1}s");
+                    await Task.Delay(delay);
+                    continue;
+                }
+                
+                var errorMsg = GetNetworkErrorMessage(ex);
+                if (options.ShowErrorToast)
+                {
                     ToastService?.ShowError(errorMsg);
                 }
                 
-                return new ApiResponse<T> { Code = (int)response.StatusCode, Msg = errorMsg };
+                return new ApiResponse<T> { Code = 0, Msg = errorMsg };
             }
-            
-            if (string.IsNullOrWhiteSpace(content))
+            catch (JsonException ex)
             {
-                return new ApiResponse<T> { Code = 200, Msg = "操作成功" };
-            }
-            
-            var result = JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
-            
-            if (result == null)
-            {
+                Debug.WriteLine($"[HttpService] JSON解析错误: {ex.Message}");
+                
                 if (options.ShowErrorToast)
                 {
                     ToastService?.ShowError("数据格式错误");
                 }
+                
                 return new ApiResponse<T> { Code = 0, Msg = "数据格式错误" };
             }
-            
-            if (!result.IsSuccess && options.ShowErrorToast)
+            catch (Exception ex)
             {
-                ToastService?.ShowError(result.Msg);
+                lastException = ex;
+                Debug.WriteLine($"[HttpService] 未知错误: {ex.Message}");
+                
+                if (options.ShowErrorToast)
+                {
+                    ToastService?.ShowError($"操作失败: {ex.Message}");
+                }
+                
+                return new ApiResponse<T> { Code = 0, Msg = ex.Message };
             }
-            
-            if (result.IsSuccess && options.ShowSuccessToast)
-            {
-                ToastService?.ShowSuccess(result.Msg);
-            }
-            
-            return result;
         }
-        catch (TaskCanceledException ex)
-        {
-            lastException = ex;
-            Debug.WriteLine($"[HttpService] 请求超时: {options.OperationName ?? url}");
-            
-            if (attempt < options.MaxRetries)
-            {
-                attempt++;
-                await Task.Delay(options.RetryDelayMs * attempt);
-                continue;
-            }
-            
-            if (options.ShowErrorToast)
-            {
-                ToastService?.ShowError("请求超时，请稍后重试");
-            }
-            
-            return new ApiResponse<T> { Code = 0, Msg = "请求超时" };
-        }
-        catch (HttpRequestException ex)
-        {
-            lastException = ex;
-            Debug.WriteLine($"[HttpService] 网络错误: {ex.Message}");
-            
-        if (attempt < options.MaxRetries)
-        {
-            attempt++;
-        await Task.Delay(options.RetryDelayMs * attempt);
-        continue;
-    }
-    
-    var errorMsg = GetNetworkErrorMessage(ex);
-    if (options.ShowErrorToast)
-    {
-        ToastService?.ShowError(errorMsg);
-    }
-    
-    return new ApiResponse<T> { Code = 0, Msg = errorMsg };
-        }
-        catch (JsonException ex)
-        {
-            Debug.WriteLine($"[HttpService] JSON解析错误: {ex.Message}");
-            
-            if (options.ShowErrorToast)
-            {
-                ToastService?.ShowError("数据格式错误");
-            }
-            
-            return new ApiResponse<T> { Code = 0, Msg = "数据格式错误" };
-        }
-        catch (Exception ex)
-        {
-            lastException = ex;
-            Debug.WriteLine($"[HttpService] 未知错误: {ex.Message}");
-            
-            if (options.ShowErrorToast)
-        {
-                ToastService?.ShowError($"操作失败: {ex.Message}");
-            }
-            
-            return new ApiResponse<T> { Code = 0, Msg = ex.Message };
-        }
+
+        return new ApiResponse<T> { Code = 0, Msg = lastException?.Message ?? "请求失败" };
     }
 
-    return new ApiResponse<T> { Code = 0, Msg = lastException?.Message ?? "请求失败" };
-}
-
- private HttpRequestMessage CreateRequest(HttpMethod method, string url, object? body, RequestOptions options)
+    private HttpRequestMessage CreateRequest(HttpMethod method, string url, object? body, RequestOptions options)
     {
         var request = new HttpRequestMessage(method, url);
         
@@ -293,30 +300,30 @@ public class HttpService : IDisposable
     {
         var baseUrl = ConfigService.Config.ServerUrl;
         
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            throw new InvalidOperationException("服务器地址未配置");
+        }
+        
         if (endpoint.StartsWith("http://") || endpoint.StartsWith("https://"))
         {
             return endpoint;
         }
         
-        if (!baseUrl.EndsWith("/") && !endpoint.StartsWith("/"))
-        {
-            return $"{baseUrl}/{endpoint}";
-        }
-        
-        return $"{baseUrl}{endpoint}";
+        return $"{baseUrl.TrimEnd('/')}/{endpoint.TrimStart('/')}";
     }
 
     private bool ShouldRetry(HttpStatusCode statusCode)
     {
         return statusCode switch
         {
-        HttpStatusCode.InternalServerError => true,
-        HttpStatusCode.BadGateway => true,
-        HttpStatusCode.ServiceUnavailable => true,
-        HttpStatusCode.GatewayTimeout => true,
-        HttpStatusCode.RequestTimeout => true,
-        HttpStatusCode.TooManyRequests => true,
-        _ => false
+            HttpStatusCode.InternalServerError => true,
+            HttpStatusCode.BadGateway => true,
+            HttpStatusCode.ServiceUnavailable => true,
+            HttpStatusCode.GatewayTimeout => true,
+            HttpStatusCode.RequestTimeout => true,
+            HttpStatusCode.TooManyRequests => true,
+            _ => false
         };
     }
 
@@ -325,7 +332,7 @@ public class HttpService : IDisposable
         return statusCode switch
         {
             HttpStatusCode.BadRequest => "请求参数错误",
-            HttpStatusCode.Unauthorized => "登录已过期，请重新绑定",
+            HttpStatusCode.Unauthorized => "登录已过期，请重新绑定设备",
             HttpStatusCode.Forbidden => "没有权限执行此操作",
             HttpStatusCode.NotFound => "请求的资源不存在",
             HttpStatusCode.InternalServerError => "服务器繁忙，请稍后重试",
@@ -334,7 +341,7 @@ public class HttpService : IDisposable
             HttpStatusCode.GatewayTimeout => "网关超时，请稍后重试",
             HttpStatusCode.RequestTimeout => "请求超时",
             HttpStatusCode.TooManyRequests => "请求过于频繁，请稍后重试",
-            _ => TryExtractMessage(content) ?? $"请求失败 ({(int)statusCode}"
+            _ => TryExtractMessage(content) ?? $"请求失败 ({(int)statusCode})"
         };
     }
 
@@ -352,7 +359,7 @@ public class HttpService : IDisposable
             };
         }
         
-        return "网络连接失败,请检查网络";
+        return "网络连接失败，请检查网络";
     }
 
     private string? TryExtractMessage(string content)
@@ -388,7 +395,7 @@ public class HttpService : IDisposable
         
         if (request.Content != null)
         {
-        Debug.WriteLine($"[HttpService] >>> Body: {request.Content}");
+            Debug.WriteLine($"[HttpService] >>> Body: {request.Content}");
         }
     }
 
@@ -402,26 +409,7 @@ public class HttpService : IDisposable
         }
         else if (!string.IsNullOrEmpty(content))
         {
-        Debug.WriteLine($"[HttpService] <<< Content: {content.Substring(0, 500)}... (truncated)");
-        }
-    }
-
-    private void HandleException(Exception ex, RequestOptions options)
-    {
-        Debug.WriteLine($"[HttpService] 异常: {ex.Message}");
-        Debug.WriteLine($"[HttpService] 堆栈: {ex.StackTrace}");
-        
-        if (options.ShowErrorToast && ToastService != null)
-        {
-            var message = ex switch
-            {
-                TaskCanceledException => "请求超时，请稍后重试",
-                HttpRequestException httpEx => GetNetworkErrorMessage(httpEx),
-                JsonException => "数据格式错误",
-                _ => $"操作失败: {ex.Message}"
-            };
-            
-            ToastService.ShowError(message);
+            Debug.WriteLine($"[HttpService] <<< Content: {content.Substring(0, 500)}... (truncated)");
         }
     }
 

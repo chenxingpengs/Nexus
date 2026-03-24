@@ -172,94 +172,73 @@
                 </StackPanel>
             </Border>
             
-            <!-- 补课提示 -->
-            <Border Grid.Row="3"
-                    Background="#E3F2FD"
-                    CornerRadius="8"
-                    Padding="16,20"
-                    Margin="0,0,0,12"
-                    IsVisible="{Binding ShowMakeupMessage}">
-                <StackPanel HorizontalAlignment="Center" Spacing="8">
-                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="32" Foreground="#2196F3"/>
-                    <TextBlock Text="今日补课"
-                               FontSize="16"
-                               FontWeight="Medium"
-                               Foreground="#2196F3"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding Message}"
-                               FontSize="12"
-                               Foreground="#757575"
-                               HorizontalAlignment="Center"
-                               TextWrapping="Wrap"
-                               MaxWidth="200"/>
-                </StackPanel>
-            </Border>
             
-            <!-- 正常考勤数据 -->
+            <!-- 正常考勤数据 - 统计信息放大显示 -->
             <Border Grid.Row="3" 
                     Background="#FFFFFF" 
                     CornerRadius="8" 
-                    Padding="16,12"
+                    Padding="0"
                     Margin="0,0,0,12"
                     IsVisible="{Binding ShowAttendanceData}">
-                <StackPanel HorizontalAlignment="Center" Spacing="8">
-                    <TextBlock Text="出勤率"
-                               FontSize="12"
-                               Foreground="#757575"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding AttendanceRateDisplay}"
-                               FontSize="32"
-                               FontWeight="Bold"
-                               Foreground="#1976D2"
-                               HorizontalAlignment="Center"/>
-                    <Grid Width="200" Height="6" Margin="0,8,0,0">
-                        <Border Background="#E0E0E0" CornerRadius="3"/>
-                        <Border Background="#1976D2" 
-                                CornerRadius="3"
-                                Width="{Binding ProgressWidth}"
-                                HorizontalAlignment="Left"/>
+                <StackPanel Spacing="0">
+                    <!-- 补课提示条 -->
+                    <Border Background="#E3F2FD" 
+                            CornerRadius="8,8,0,0"
+                            Padding="12,8"
+                            IsVisible="{Binding ShowMakeupMessage}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="16" Foreground="#2196F3"/>
+                            <TextBlock Text="{Binding Message}"
+                                       FontSize="12"
+                                       Foreground="#2196F3"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- 考勤数据 -->
+                    <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto" Margin="12,12">
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.People}" FontSize="20" Foreground="#1976D2" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalCount}" FontSize="28" FontWeight="Bold" Foreground="#1976D2" HorizontalAlignment="Center"/>
+                            <TextBlock Text="应到" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="20" Foreground="#4CAF50" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding PresentCount}" FontSize="28" FontWeight="Bold" Foreground="#4CAF50" HorizontalAlignment="Center"/>
+                            <TextBlock Text="实到" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clock}" FontSize="20" Foreground="#FF9800" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding LeaveCount}" FontSize="28" FontWeight="Bold" Foreground="#FF9800" HorizontalAlignment="Center"/>
+                            <TextBlock Text="请假" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="3" HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clear}" FontSize="20" Foreground="#F44336" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding AbsentCount}" FontSize="28" FontWeight="Bold" Foreground="#F44336" HorizontalAlignment="Center"/>
+                            <TextBlock Text="缺勤" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
                     </Grid>
                 </StackPanel>
             </Border>
             
-            <!-- 统计数据 -->
-            <Grid Grid.Row="4" 
-                  ColumnDefinitions="*,*" 
-                  RowDefinitions="Auto,Auto" 
-                  Margin="0,0,0,0"
-                  IsVisible="{Binding ShowAttendanceData}">
-                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
-                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.People}" FontSize="14" Foreground="#1976D2"/>
-                    <TextBlock FontSize="12" Foreground="#616161">
-                        <Run Text="应到: "/>
-                        <Run Text="{Binding TotalCount}" FontWeight="Medium"/>
-                    </TextBlock>
+            <!-- 前往考勤页面按钮 -->
+            <Button Grid.Row="4"
+                    Command="{Binding OpenAttendancePageCommand}"
+                    IsVisible="{Binding ShowAttendanceData}"
+                    Background="#1976D2"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="12,10"
+                    CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Open}" FontSize="16" Foreground="White"/>
+                    <TextBlock Text="前往考勤页面" FontSize="14" FontWeight="Medium"/>
                 </StackPanel>
-                
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
-                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="14" Foreground="#4CAF50"/>
-                    <TextBlock FontSize="12" Foreground="#616161">
-                        <Run Text="实到: "/>
-                        <Run Text="{Binding PresentCount}" FontWeight="Medium"/>
-                    </TextBlock>
-                </StackPanel>
-                
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
-                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clock}" FontSize="14" Foreground="#FF9800"/>
-                    <TextBlock FontSize="12" Foreground="#616161">
-                        <Run Text="请假: "/>
-                        <Run Text="{Binding LeaveCount}" FontWeight="Medium"/>
-                    </TextBlock>
-                </StackPanel>
-                
-                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clear}" FontSize="14" Foreground="#F44336"/>
-                    <TextBlock FontSize="12" Foreground="#616161">
-                        <Run Text="缺勤: "/>
-                        <Run Text="{Binding AbsentCount}" FontWeight="Medium"/>
-                    </TextBlock>
-                </StackPanel>
-            </Grid>
+            </Button>
         </Grid>
     </Border>
     

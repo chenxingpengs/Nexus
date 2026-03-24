@@ -197,7 +197,7 @@ namespace Nexus.Models.Widget
 
         public bool ShowMakeupMessage => SpecialStatus == "makeup";
 
-        public bool ShowAttendanceData => ScheduleId > 0 && string.IsNullOrEmpty(SpecialStatus);
+        public bool ShowAttendanceData => ScheduleId > 0 && (string.IsNullOrEmpty(SpecialStatus) || SpecialStatus == "makeup");
 
         public void UpdateFromAttendanceData(AttendanceData data)
         {
@@ -215,6 +215,11 @@ namespace Nexus.Models.Widget
                 TimeSlotId = data.CurrentTimeSlot.Id;
                 TimeSlotName = data.CurrentTimeSlot.Name;
             }
+            else
+            {
+                TimeSlotId = 0;
+                TimeSlotName = "";
+            }
 
             if (data.Schedule != null)
             {
@@ -222,8 +227,6 @@ namespace Nexus.Models.Widget
                 ClassId = data.Schedule.ClassId;
                 ClassName = data.Schedule.ClassName;
                 Grade = data.Schedule.Grade;
-                TimeSlotId = data.Schedule.TimeSlotId;
-                TimeSlotName = data.Schedule.TimeSlotName;
                 TotalCount = data.Schedule.ShouldAttend;
                 PresentCount = data.Schedule.ActualAttend;
                 LeaveCount = data.Schedule.LeaveCount;
@@ -234,6 +237,9 @@ namespace Nexus.Models.Widget
             else
             {
                 ScheduleId = 0;
+                ClassId = 0;
+                ClassName = "";
+                Grade = "";
                 TotalCount = 0;
                 PresentCount = 0;
                 LeaveCount = 0;

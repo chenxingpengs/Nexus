@@ -73,6 +73,8 @@ namespace Nexus.Services
                     DeviceId = Config.DeviceId,
                     DeviceName = Config.DeviceName,
                     DeviceType = Config.DeviceType,
+                    MacAddress = Config.MacAddress,
+                    IpAddress = Config.IpAddress,
                     AppVersion = Config.AppVersion,
                     AccessToken = !string.IsNullOrEmpty(Config.AccessToken)
                         ? EncryptToken(Config.AccessToken)
@@ -146,6 +148,13 @@ namespace Nexus.Services
         {
             Config.DeviceId = deviceId;
             Config.DeviceName = deviceName;
+            SaveConfig();
+        }
+
+        public void SetNetworkInfo(string? macAddress, string? ipAddress)
+        {
+            Config.MacAddress = macAddress;
+            Config.IpAddress = ipAddress;
             SaveConfig();
         }
 

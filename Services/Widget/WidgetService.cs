@@ -193,7 +193,7 @@ namespace Nexus.Services.Widget
             Debug.WriteLine("[WidgetService] InitializeAsync 开始");
             WeatherData = await _weatherService.GetInitialDataAsync();
             AnnouncementData = new AnnouncementCardModel();
-            AttendanceViewModel = new AttendanceCardViewModel(new AttendanceCardModel(), _attendanceService);
+            AttendanceViewModel = new AttendanceCardViewModel(new AttendanceCardModel(), _attendanceService, _configService);
             
             ShortcutData = new ShortcutCardModel();
             RefreshShortcutData();

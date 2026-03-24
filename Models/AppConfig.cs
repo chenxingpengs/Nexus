@@ -8,6 +8,8 @@ namespace Nexus.Models
         public string DeviceId { get; set; } = string.Empty;
         public string DeviceName { get; set; } = string.Empty;
         public string DeviceType { get; set; } = "classroom_terminal";
+        public string? MacAddress { get; set; }
+        public string? IpAddress { get; set; }
         public string? AppVersion { get; set; }
         public string? AccessToken { get; set; }
         public DateTime? TokenExpiresAt { get; set; }

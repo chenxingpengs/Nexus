@@ -57,7 +57,7 @@ public class ToastService : IDisposable
         });
     }
 
-    public void ShowError(string message, string title = "错误", int durationMs = 20000)
+    public void ShowError(string message, string title = "错误", int durationMs = 8000)
     {
         Show(new ToastItem
         {

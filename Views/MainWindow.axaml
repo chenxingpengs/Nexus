@@ -24,7 +24,101 @@
 
         <Grid Grid.Row="1" Margin="40">
             
-            <Panel IsVisible="{Binding IsShowLoading}">
+            <Panel IsVisible="{Binding IsShowSelectBindMode}" ZIndex="1">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="40">
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="选择绑定方式" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#333333" HorizontalAlignment="Center"/>
+                        <TextBlock Text="请选择一种方式完成设备绑定" FontSize="16" 
+                                   Foreground="#888888" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="20" HorizontalAlignment="Center">
+                        <Button Command="{Binding SelectQrCodeBindCommand}"
+                                Width="320" Height="80" FontSize="16" CornerRadius="12"
+                                Background="#1976D2" Foreground="#FFFFFF"
+                                HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="15">
+                                <TextBlock Text="&#xE8F3;" FontSize="28" FontFamily="Segoe MDL2 Assets" 
+                                           VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="5">
+                                    <TextBlock Text="扫码绑定" FontSize="18" FontWeight="SemiBold"/>
+                                    <TextBlock Text="使用微信小程序扫码绑定" FontSize="12" Opacity="0.8"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                        
+                        <Button Command="{Binding SelectAuthorizationBindCommand}"
+                                Width="320" Height="80" FontSize="16" CornerRadius="12"
+                                Background="#FFFFFF" Foreground="#333333"
+                                BorderBrush="#E0E0E0" BorderThickness="1"
+                                HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="15">
+                                <TextBlock Text="&#xE776;" FontSize="28" FontFamily="Segoe MDL2 Assets" 
+                                           VerticalAlignment="Center" Foreground="#1976D2"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="5">
+                                    <TextBlock Text="管理员授权绑定" FontSize="18" FontWeight="SemiBold"/>
+                                    <TextBlock Text="申请管理员远程授权" FontSize="12" Opacity="0.6"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="设备信息" FontSize="12" Foreground="#AAAAAA" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding DeviceId}" FontSize="11" Foreground="#CCCCCC" 
+                                   FontFamily="Consolas" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowAuthorizationPending}" ZIndex="2">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#FFF3E0" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE823;" FontSize="48" Foreground="#FF9800" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="等待管理员授权" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#FF9800" HorizontalAlignment="Center"/>
+                        <TextBlock Text="授权请求已发送，请在管理后台完成授权" FontSize="16" 
+                                   Foreground="#666666" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="8" Padding="20" 
+                            BorderBrush="#E0E0E0" BorderThickness="1" HorizontalAlignment="Center">
+                        <StackPanel Spacing="15">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="请求ID：" FontSize="14" Foreground="#888888"/>
+                                <TextBlock Text="{Binding AuthorizationRequestId}" FontSize="14" 
+                                           Foreground="#333333" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="有效期：" FontSize="14" Foreground="#888888"/>
+                                <TextBlock Text="{Binding AuthorizationCountdown}" FontSize="14" 
+                                           Foreground="#FF9800" FontWeight="Medium"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                    
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="14" 
+                               Foreground="#888888" HorizontalAlignment="Center"/>
+                    
+                    <Button Command="{Binding SelectQrCodeBindCommand}"
+                            Content="切换到扫码绑定" 
+                            Width="150" Height="40" FontSize="14" CornerRadius="6"
+                            Background="Transparent" Foreground="#1976D2"
+                            BorderBrush="#1976D2" BorderThickness="1"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+            
+            <Panel IsVisible="{Binding IsShowLoading}" ZIndex="3">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
                     <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
                     <TextBlock Text="{Binding StatusMessage}" FontSize="18" Foreground="#666666" 
@@ -32,7 +126,7 @@
                 </StackPanel>
             </Panel>
 
-            <Panel IsVisible="{Binding IsShowQrCode}">
+            <Panel IsVisible="{Binding IsShowQrCode}" ZIndex="4">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
                     <TextBlock Text="请使用微信小程序扫码绑定" FontSize="24" FontWeight="Bold" 
                                Foreground="#333333" HorizontalAlignment="Center"/>
@@ -90,7 +184,7 @@
                 </StackPanel>
             </Panel>
 
-            <Panel IsVisible="{Binding IsShowVerifySuccess}">
+            <Panel IsVisible="{Binding IsShowVerifySuccess}" ZIndex="5">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
                     <Border Background="#E3F2FD" CornerRadius="50" Width="100" Height="100"
                             HorizontalAlignment="Center">
@@ -121,7 +215,7 @@
                 </StackPanel>
             </Panel>
 
-            <Panel IsVisible="{Binding IsShowBindSuccess}">
+            <Panel IsVisible="{Binding IsShowBindSuccess}" ZIndex="6">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
                     <Border Background="#E8F5E9" CornerRadius="50" Width="100" Height="100"
                             HorizontalAlignment="Center">
@@ -203,7 +297,7 @@
                 </StackPanel>
             </Panel>
 
-            <Panel IsVisible="{Binding IsShowError}">
+            <Panel IsVisible="{Binding IsShowError}" ZIndex="7">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
                     <Border Background="#FFEBEE" CornerRadius="50" Width="100" Height="100"
                             HorizontalAlignment="Center">
