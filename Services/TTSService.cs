@@ -76,16 +76,19 @@ namespace Nexus.Services
 
         private async Task ProcessQueueAsync()
         {
-            if (_isPlaying)
-                return;
+            bool shouldProcess;
 
             lock (_queueLock)
             {
-                if (_playQueue.Count == 0)
+                if (_isPlaying || _playQueue.Count == 0)
                     return;
+
+                _isPlaying = true;
+                shouldProcess = true;
             }
 
-            _isPlaying = true;
+            if (!shouldProcess) return;
+
             _currentCancellationToken = new CancellationTokenSource();
 
             while (true)

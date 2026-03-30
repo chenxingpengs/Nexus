@@ -653,6 +653,11 @@ namespace Nexus.ViewModels
                     expiresAt = parsedDate;
                 }
 
+                var (deviceId, macAddress, ipAddress) = DeviceIdentifier.GetDeviceInfo();
+                _configService.SetDeviceInfo(deviceId, DeviceName);
+                _configService.SetNetworkInfo(macAddress, ipAddress);
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 设备信息已保存: DeviceId={deviceId}, Mac={macAddress}, IP={ipAddress}");
+
                 _configService.UpdateBindInfo(classId, BindClassName, accessToken, expiresAt);
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 绑定信息已保存，classId: {classId}, className: {BindClassName}");
                 System.Diagnostics.Debug.WriteLine($"[Nexus] ConfigService.Config.AccessToken: {(string.IsNullOrEmpty(_configService.Config.AccessToken) ? "空" : _configService.Config.AccessToken.Substring(0, Math.Min(20, _configService.Config.AccessToken.Length)) + "...")}");
@@ -739,6 +744,10 @@ namespace Nexus.ViewModels
 
             var (deviceId, macAddress, ipAddress) = DeviceIdentifier.GetDeviceInfo();
             DeviceId = deviceId;
+
+            _configService.SetDeviceInfo(deviceId, DeviceName);
+            _configService.SetNetworkInfo(macAddress, ipAddress);
+            System.Diagnostics.Debug.WriteLine($"[Nexus] 设备信息已保存: DeviceId={deviceId}, Mac={macAddress}, IP={ipAddress}");
 
             var endpoint = $"/desktop/bind/token?device_id={Uri.EscapeDataString(DeviceId)}&device_name={Uri.EscapeDataString(DeviceName)}&device_type={Uri.EscapeDataString(DeviceType)}&app_version={Uri.EscapeDataString(AppVersion ?? "")}";
 
@@ -840,6 +849,10 @@ namespace Nexus.ViewModels
             var (deviceId, macAddress, ipAddress) = DeviceIdentifier.GetDeviceInfo();
             DeviceId = deviceId;
 
+            _configService.SetDeviceInfo(deviceId, DeviceName);
+            _configService.SetNetworkInfo(macAddress, ipAddress);
+            System.Diagnostics.Debug.WriteLine($"[Nexus] 设备信息已保存: DeviceId={deviceId}, Mac={macAddress}, IP={ipAddress}");
+
             var authService = new AuthService(_configService, _toastService);
             var (success, data, error, alreadyBound) = await authService.CreateBindRequestAsync(DeviceName, "通过管理员授权绑定");
 
@@ -926,6 +939,11 @@ namespace Nexus.ViewModels
                     switch (data.Status)
                     {
                         case "authorized":
+                            var (devId, mac, ip) = DeviceIdentifier.GetDeviceInfo();
+                            _configService.SetDeviceInfo(devId, DeviceName);
+                            _configService.SetNetworkInfo(mac, ip);
+                            System.Diagnostics.Debug.WriteLine($"[Nexus] 授权成功，设备信息已保存: DeviceId={devId}, Mac={mac}, IP={ip}");
+
                             BindClassName = data.ClassName ?? "";
                             BindClassId = data.ClassId;
                             StatusMessage = "授权成功！";
@@ -988,9 +1006,23 @@ namespace Nexus.ViewModels
             if (_isDisposed) return;
 
             _countdownTimer?.Stop();
+            _countdownTimer = null;
+
+            if (_socketIOService != null)
+            {
+                _socketIOService.MessageReceived -= OnSocketIOMessageReceived;
+                _socketIOService.ErrorOccurred -= OnSocketIOErrorOccurred;
+                _socketIOService.Connected -= OnSocketIOConnected;
+                _socketIOService.Disconnected -= OnSocketIODisconnected;
+                _socketIOService.Reconnecting -= OnSocketIOReconnecting;
+                _socketIOService.Reconnected -= OnSocketIOReconnected;
+                _socketIOService.ConnectionInfoChanged -= OnConnectionInfoChanged;
+                _socketIOService.LatencyUpdated -= OnLatencyUpdated;
+                _socketIOService.Dispose();
+            }
+
             _httpService.Dispose();
             _qrCodeService.Dispose();
-            _socketIOService.Dispose();
 
             _isDisposed = true;
             GC.SuppressFinalize(this);

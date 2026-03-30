@@ -87,8 +87,8 @@ namespace Nexus.Services
                 result.Success = true;
                 result.Message = action switch
                 {
-                    PowerAction.Shutdown => "系统将在5秒后关机",
-                    PowerAction.Reboot => "系统将在5秒后重启",
+                    PowerAction.Shutdown => "系统将在10秒后关机",
+                    PowerAction.Reboot => "系统将在10秒后重启",
                     _ => ""
                 };
 

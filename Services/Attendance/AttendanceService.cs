@@ -170,7 +170,12 @@ public class AttendanceService : HttpService, IDisposable
         Debug.WriteLine("[AttendanceService] 时段监控已停止");
     }
 
-    private async void CheckTimeSlot(object? state)
+    private void CheckTimeSlot(object? state)
+    {
+        _ = CheckTimeSlotAsync();
+    }
+
+    private async Task CheckTimeSlotAsync()
     {
         try
         {
@@ -180,6 +185,7 @@ public class AttendanceService : HttpService, IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine($"[AttendanceService] 时段检查失败: {ex.Message}");
+            ErrorOccurred?.Invoke(this, $"时段检查失败: {ex.Message}");
         }
     }
 

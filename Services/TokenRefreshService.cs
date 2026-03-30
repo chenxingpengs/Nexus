@@ -143,7 +143,7 @@ public class TokenRefreshService : IDisposable
 
         if (_authService.IsTokenExpiringSoon(AutoRefreshThresholdDays))
         {
-            _ = RefreshTokenWithRetryAsync();
+            return await RefreshTokenWithRetryAsync();
         }
 
         return true;

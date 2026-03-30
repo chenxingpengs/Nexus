@@ -39,6 +39,8 @@ namespace Nexus.Services
                 return;
             }
 
+            bool shouldShowNext;
+
             lock (_lock)
             {
                 if (notification.NotificationPriority == Models.NotificationPriority.Urgent)
@@ -53,36 +55,41 @@ namespace Nexus.Services
                     Debug.WriteLine($"[NotificationService] 通知入队: {notification.Title}, 队列长度: {_notificationQueue.Count}");
                 }
 
-                if (!_isDisplaying)
-                {
-                    ShowNext();
-                }
+                shouldShowNext = !_isDisplaying;
+            }
+
+            if (shouldShowNext)
+            {
+                ShowNext();
             }
         }
 
         private void ShowNext()
         {
+            Models.Notification? notificationToDisplay = null;
+
             lock (_lock)
             {
                 if (_notificationQueue.TryDequeue(out var notification))
                 {
                     _currentNotification = notification;
                     _isDisplaying = true;
+                    notificationToDisplay = notification;
                     
                     Debug.WriteLine($"[NotificationService] 显示通知: {notification.Title}");
-                    NotificationReceived?.Invoke(this, notification);
-                    
-                    ShowNotificationWindow(notification);
-                    
-                    _ = SendAckAsync(notification.Id);
                 }
                 else
                 {
                     _currentNotification = null;
                     _isDisplaying = false;
                     Debug.WriteLine($"[NotificationService] 队列为空，停止显示");
+                    return;
                 }
             }
+
+            NotificationReceived?.Invoke(this, notificationToDisplay);
+            ShowNotificationWindow(notificationToDisplay);
+            _ = SendAckAsync(notificationToDisplay.Id);
         }
 
         private void ShowNotificationWindow(Models.Notification notification)

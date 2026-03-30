@@ -15,7 +15,7 @@ using System.Windows.Input;
 
 namespace Nexus.ViewModels
 {
-    public class MainViewModel : ViewModelBase
+    public class MainViewModel : ViewModelBase, IDisposable
     {
         private readonly ConfigService _configService;
         private readonly AuthService _authService;
@@ -403,6 +403,31 @@ namespace Nexus.ViewModels
         {
             NotificationVisible = false;
             _notificationService?.CloseCurrent();
+        }
+
+        public void Dispose()
+        {
+            if (_socketIOService != null)
+            {
+                _socketIOService.MessageReceived -= OnSocketMessageReceived;
+                _socketIOService.NotificationReceived -= OnNotificationReceived;
+                _socketIOService.Dispose();
+                _socketIOService = null;
+            }
+
+            if (_updateCheckTimer != null)
+            {
+                _updateCheckTimer.Stop();
+                _updateCheckTimer = null;
+            }
+
+            _powerControlService.PowerControlExecuted -= OnPowerControlExecuted;
+
+            _notificationService?.Dispose();
+            _notificationService = null;
+
+            _widgetService?.Stop();
+            _widgetService = null;
         }
     }
 

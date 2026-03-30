@@ -29,7 +29,7 @@ namespace Nexus.Services
         Error
     }
 
-    public class SocketIOService : IDisposable
+    public class SocketIOService : IDisposable, IAsyncDisposable
     {
         private readonly string _baseUrl;
         private SocketIOClient.SocketIO? _socket;
@@ -471,14 +471,48 @@ namespace Nexus.Services
 
         public void Dispose()
         {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsyncCore().ConfigureAwait(false);
+            Dispose(disposing: false);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
             if (_isDisposed) return;
 
-            _ = DisconnectAsync();
-            StopHeartbeat();
-            _cancellationTokenSource?.Dispose();
+            if (disposing)
+            {
+                StopHeartbeat();
+                _cancellationTokenSource?.Dispose();
+            }
 
             _isDisposed = true;
-            GC.SuppressFinalize(this);
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            try
+            {
+                if (_socket?.Connected == true)
+                {
+                    await _socket.DisconnectAsync().ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SocketIO] DisposeAsyncCore 断开连接错误: {ex.Message}");
+            }
+            finally
+            {
+                _socket?.Dispose();
+                _socket = null;
+            }
         }
     }
 }

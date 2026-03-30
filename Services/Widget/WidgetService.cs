@@ -56,13 +56,16 @@ namespace Nexus.Services.Widget
 
         private void OnWeatherDataUpdated(object? sender, WeatherCardModel e)
         {
-            WeatherData = e;
-            WeatherUpdated?.Invoke(this, e);
-            
-            if (_widgetWindow != null)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                _widgetWindow.UpdateWeatherData(e);
-            }
+                WeatherData = e;
+                WeatherUpdated?.Invoke(this, e);
+                
+                if (_widgetWindow != null)
+                {
+                    _widgetWindow.UpdateWeatherData(e);
+                }
+            });
         }
 
         private void OnUsbDrivesChanged(object? sender, EventArgs e)
