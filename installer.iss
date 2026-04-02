@@ -1,5 +1,5 @@
 #define MyAppName "Nexus"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.2.2"
 #define MyAppPublisher "红旗中学"
 #define MyAppURL "https://hqzx.me"
 #define MyAppExeName "Nexus.exe"
@@ -33,6 +33,14 @@ ArchitecturesAllowed=x64compatible
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\Unofficial\ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+chinesesimplified.UninstallPasswordTitle=卸载密码验证
+chinesesimplified.UninstallPasswordPrompt=请输入卸载密码以继续卸载：
+chinesesimplified.UninstallPasswordIncorrect=密码错误，无法卸载程序。
+english.UninstallPasswordTitle=Uninstall Password Verification
+english.UninstallPasswordPrompt=Please enter the uninstall password to continue:
+english.UninstallPasswordIncorrect=Incorrect password. Cannot uninstall the program.
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
@@ -50,3 +58,70 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+const
+  UninstallPassword = 'zhhqzx';
+
+function CheckPassword(const Password: string): Boolean;
+begin
+  Result := (Password = UninstallPassword);
+end;
+
+function GetPasswordInput: string;
+var
+  Script: Variant;
+begin
+  Result := '';
+  try
+    Script := CreateOleObject('WScript.Shell');
+    Result := Script.InputBox('请输入卸载密码以继续卸载：', '卸载密码验证', '');
+  except
+    Result := '';
+  end;
+end;
+
+function PromptForUninstallPassword: Boolean;
+var
+  Password: string;
+  Attempts: Integer;
+begin
+  Result := False;
+  Attempts := 0;
+  
+  while Attempts < 3 do
+  begin
+    Password := GetPasswordInput;
+    
+    if Password = '' then
+      Exit;
+      
+    if CheckPassword(Password) then
+    begin
+      Result := True;
+      Exit;
+    end;
+    
+    MsgBox('密码错误，无法卸载程序。', mbError, MB_OK);
+    Inc(Attempts);
+  end;
+end;
+
+function InitializeUninstall: Boolean;
+begin
+  Result := PromptForUninstallPassword;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ConfigPath: string;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    ConfigPath := ExpandConstant('{localappdata}\Nexus');
+    if DirExists(ConfigPath) then
+    begin
+      DelTree(ConfigPath, True, True, True);
+    end;
+  end;
+end;

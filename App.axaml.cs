@@ -16,6 +16,7 @@ using Nexus.Views.Pages;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Nexus
 {
@@ -31,6 +32,9 @@ namespace Nexus
         private SplashScreenViewModel? _splashViewModel;
         private WidgetService? _widgetService;
         private ScheduleService? _scheduleService;
+        private PasswordService? _passwordService;
+        private ProcessProtectionService? _processProtectionService;
+        private MainView? _mainView;
 
         public override void Initialize()
         {
@@ -52,10 +56,15 @@ namespace Nexus
                 _authService = new AuthService(_configService, _toastService);
                 _updateService = new UpdateService(_configService, _toastService);
                 _scheduleService = new ScheduleService(_configService, _toastService);
+                _passwordService = new PasswordService();
+                _passwordService.InitializeDefaultPassword();
+                _processProtectionService = new ProcessProtectionService();
 
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 配置加载完成: IsBound={_configService.Config.IsBound}");
 
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                desktop.Exit += OnApplicationExit;
 
                 if (_configService.Config.IsBound)
                 {
@@ -68,6 +77,12 @@ namespace Nexus
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        private void OnApplicationExit(object? sender, EventArgs e)
+        {
+            _processProtectionService?.DisableProtection();
+            _processProtectionService?.Dispose();
         }
 
         private Window CreateLoadingWindow()
@@ -307,7 +322,7 @@ namespace Nexus
             _widgetService = new WidgetService(_configService!);
             
             var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!, powerControlService, wolService, _widgetService, _scheduleService!);
-            var mainView = new MainView
+            _mainView = new MainView
             {
                 DataContext = mainViewModel
             };
@@ -318,7 +333,7 @@ namespace Nexus
                 _trayService = null;
                 _widgetService?.Stop();
                 _widgetService = null;
-                mainView.Close();
+                _mainView.Close();
                 ShowSplashScreen(desktop);
             };
 
@@ -326,49 +341,90 @@ namespace Nexus
             {
                 System.Diagnostics.Debug.WriteLine("[Nexus] 准备初始化系统托盘...");
                 _trayService = new TrayService();
-                _trayService.Initialize(mainView);
+                _trayService.Initialize(_mainView);
 
                 _trayService.ShowWindowRequested += () =>
                 {
                     Dispatcher.UIThread.Post(() =>
                     {
-                        mainView.Show();
-                        mainView.WindowState = WindowState.Normal;
-                        mainView.Activate();
+                        _mainView.Show();
+                        _mainView.WindowState = WindowState.Normal;
+                        _mainView.Activate();
                     });
                 };
                 _trayService.ExitRequested += () =>
                 {
-                    Dispatcher.UIThread.Post(() =>
+                    Dispatcher.UIThread.Post(async () =>
                     {
-                        _trayService?.Dispose();
-                        _trayService = null;
-                        _widgetService?.Stop();
-                        _widgetService = null;
-                        desktop.Shutdown();
+                        await HandleExitRequest(desktop);
                     });
                 };
 
-                mainView.Closing += (s, e) =>
+                _mainView.Closing += async (s, e) =>
                 {
                     if (_trayService != null)
                     {
                         e.Cancel = true;
-                        mainView.Hide();
+                        _mainView.Hide();
                     }
                 };
             }
 
-            desktop.MainWindow = mainView;
+            desktop.MainWindow = _mainView;
 
             if (showWindow)
             {
-                mainView.Show();
+                _mainView.Show();
             }
+
+            _processProtectionService?.EnableProtection();
+            System.Diagnostics.Debug.WriteLine("[Nexus] 进程保护已启用");
 
             _ = InitializeWidgetAsync();
 
             closeWindow?.Close();
+        }
+
+        private async Task HandleExitRequest(IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            if (_passwordService == null || _mainView == null)
+            {
+                _trayService?.Dispose();
+                _trayService = null;
+                _widgetService?.Stop();
+                _widgetService = null;
+                _processProtectionService?.DisableProtection();
+                desktop.Shutdown();
+                return;
+            }
+
+            _mainView.Show();
+            _mainView.WindowState = WindowState.Normal;
+            _mainView.Activate();
+
+            var (success, password) = await PasswordDialog.ShowDialogAsync(_mainView, "退出确认 - 请输入密码");
+
+            if (success && !string.IsNullOrEmpty(password))
+            {
+                if (_passwordService.VerifyPassword(password))
+                {
+                    _trayService?.Dispose();
+                    _trayService = null;
+                    _widgetService?.Stop();
+                    _widgetService = null;
+                    _processProtectionService?.DisableProtection();
+                    desktop.Shutdown();
+                }
+                else
+                {
+                    _toastService?.ShowError("密码错误，无法退出程序");
+                    _mainView.Hide();
+                }
+            }
+            else
+            {
+                _mainView.Hide();
+            }
         }
 
         private async Task InitializeWidgetAsync()

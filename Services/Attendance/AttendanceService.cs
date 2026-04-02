@@ -158,8 +158,8 @@ public class AttendanceService : HttpService, IDisposable
         if (_isMonitoring) return;
 
         _isMonitoring = true;
-        _monitorTimer = new Timer(CheckTimeSlot, null, 0, 3600000);
-        Debug.WriteLine("[AttendanceService] 时段监控已启动，每小时检查一次");
+        _monitorTimer = new Timer(CheckTimeSlot, null, 0, 60000);
+        Debug.WriteLine("[AttendanceService] 时段监控已启动，每分钟检查一次");
     }
 
     public void StopMonitoring()

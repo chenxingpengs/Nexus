@@ -14,7 +14,7 @@ namespace Nexus.Views.Widget
     public partial class DesktopWidgetWindow : Window
     {
         private readonly WidgetService _widgetService;
-        private bool _isClosing;
+        private bool _allowClose;
         private DispatcherTimer? _positionTimer;
         private double _lastHeight;
         private const double RightOffset = 110;
@@ -267,19 +267,20 @@ namespace Nexus.Views.Widget
 
         protected override void OnClosing(WindowClosingEventArgs e)
         {
-            if (!_isClosing)
+            if (!_allowClose)
+            {
+                e.Cancel = true;
+            }
+            else
             {
                 _positionTimer?.Stop();
-                e.Cancel = true;
-                Hide();
+                base.OnClosing(e);
             }
-            base.OnClosing(e);
         }
 
         public void ForceClose()
         {
-            _isClosing = true;
-            _positionTimer?.Stop();
+            _allowClose = true;
             Close();
         }
     }
