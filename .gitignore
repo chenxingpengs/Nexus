@@ -43,3 +43,6 @@ bld/
 .vs/
 
 .gitignore
+.trae/
+Output/
+

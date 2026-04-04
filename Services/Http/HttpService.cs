@@ -31,6 +31,7 @@ public class HttpService : IDisposable
     };
 
     private bool _disposed;
+    private bool _hasAttemptedAuthRefresh;
 
     public HttpService(ConfigService configService, ToastService? toastService = null)
     {
@@ -133,6 +134,7 @@ public class HttpService : IDisposable
         );
         
         Exception? lastException = null;
+        _hasAttemptedAuthRefresh = false;
 
         while (backoff.CanRetry)
         {
@@ -155,6 +157,21 @@ public class HttpService : IDisposable
                     
                     if (response.StatusCode == HttpStatusCode.Unauthorized)
                     {
+                        if (options.RequireAuth && !_hasAttemptedAuthRefresh)
+                        {
+                            _hasAttemptedAuthRefresh = true;
+                            Debug.WriteLine("[HttpService] 收到401，尝试自动刷新Token...");
+                            
+                            var refreshSuccess = await TryRefreshAuthTokenAsync();
+                            if (refreshSuccess)
+                            {
+                                Debug.WriteLine("[HttpService] Token刷新成功，使用新Token重试请求");
+                                continue;
+                            }
+                            
+                            Debug.WriteLine("[HttpService] Token刷新失败");
+                        }
+                        
                         ToastService?.ShowError("登录已过期，请重新绑定设备");
                         return new ApiResponse<T> { Code = 401, Msg = errorMsg };
                     }
@@ -411,6 +428,11 @@ public class HttpService : IDisposable
         {
             Debug.WriteLine($"[HttpService] <<< Content: {content.Substring(0, 500)}... (truncated)");
         }
+    }
+
+    protected virtual async Task<bool> TryRefreshAuthTokenAsync()
+    {
+        return await Task.FromResult(false);
     }
 
     public void Dispose()

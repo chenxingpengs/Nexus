@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Pages"
+             x:Class="Nexus.Views.Pages.TimeSlotQuotaPage"
+             x:DataType="vm:TimeSlotQuotaViewModel">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20" Margin="0,0,0,32">
+
+            <StackPanel Spacing="8" Margin="0,0,0,8">
+                <TextBlock Text="时段人数配置"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           Foreground="#1976D2"/>
+                <TextBlock Text="配置当前班级在各时段的应到人数"
+                           FontSize="14"
+                           Foreground="#757575"/>
+            </StackPanel>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding IsBound}">
+                <StackPanel Spacing="20">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#E3F2FD" CornerRadius="8" Padding="10">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.People}" FontSize="20" Foreground="#1976D2"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ClassName, StringFormat='{}{0} 时段人数配置'}" FontSize="18" FontWeight="SemiBold" Foreground="#424242"/>
+                            <TextBlock FontSize="12" Foreground="#757575">
+                                <Run Text="班级总人数："/>
+                                <Run Text="{Binding StudentCount}" Foreground="#1976D2" FontWeight="Medium"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Background="#FFEBEE" CornerRadius="8" Padding="12" IsVisible="{Binding HasError}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="16" Foreground="#E53935"/>
+                            <TextBlock Text="{Binding ErrorMessage}" FontSize="13" Foreground="#C62828" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="16" IsVisible="{Binding ShowContent}">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="时段名称" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="时间段" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0,0,0"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="应到人数" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="30,0,0,0"/>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding QuotaItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:TimeSlotQuotaItem">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto" Margin="0,8,0,0">
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding TimeSlotName}" FontSize="14" Foreground="#424242" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" FontSize="13" Foreground="#757575" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0,0,0">
+                                                <Run Text="{Binding StartTime}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding EndTime}"/>
+                                            </TextBlock>
+                                            <ui:NumberBox Grid.Row="0" Grid.Column="2"
+                                                          Value="{Binding Quota, Mode=TwoWay}"
+                                                          Minimum="0"
+                                                          Maximum="999"
+                                                          Width="100"
+                                                          HorizontalAlignment="Center"
+                                                          Margin="30,0,0,0"
+                                                          SmallChange="1"
+                                                          LargeChange="5"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Panel IsVisible="{Binding IsLoading}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                            <ui:ProgressRing IsActive="True" Width="24" Height="24"/>
+                            <TextBlock Text="加载中..." FontSize="12" Foreground="#757575"/>
+                        </StackPanel>
+                    </Panel>
+
+                    <Button Command="{Binding SaveCommand}"
+                            Background="#1976D2"
+                            CornerRadius="8"
+                            Padding="24,10"
+                            HorizontalAlignment="Stretch"
+                            MaxWidth="200"
+                            IsVisible="{Binding ShowSaveButton}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Save}" FontSize="14" Foreground="White"/>
+                            <TextBlock Text="保存配置" Foreground="White" FontSize="13"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="24"
+                    BoxShadow="0 2 8 0 #1A000000"
+                    IsVisible="{Binding !IsBound}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Background="#FFEBEE" CornerRadius="8" Padding="10">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="20" Foreground="#E53935"/>
+                        </Border>
+                        <TextBlock Text="设备未绑定" FontSize="18" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="请先绑定设备后再配置时段人数" FontSize="14" Foreground="#757575"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

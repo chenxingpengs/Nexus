@@ -196,6 +196,16 @@ public class AuthService : HttpService
         return (true, null);
     }
 
+    protected override async Task<bool> TryRefreshAuthTokenAsync()
+    {
+        var (success, errorMessage) = await RefreshTokenAsync();
+        if (!success)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AuthService] 自动Token刷新失败: {errorMessage}");
+        }
+        return success;
+    }
+
     public async Task<(bool Success, AuthorizationRequestData? Data, string? ErrorMessage, bool AlreadyBound)> CreateBindRequestAsync(string? deviceName = null, string? requestNote = null)
     {
         var config = ConfigService.Config;

@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.Input;
 using Nexus.Services;
+using Nexus.Services.Http;
 using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +14,7 @@ namespace Nexus.ViewModels.Pages
         private readonly ConfigService _configService;
         private readonly AuthService _authService;
         private readonly ScheduleService _scheduleService;
+        private readonly HttpService _httpService;
 
         public string DeviceId => _configService.Config.DeviceId;
         public string DeviceName => _configService.Config.DeviceName;
@@ -45,7 +48,37 @@ namespace Nexus.ViewModels.Pages
         [ObservableProperty]
         private string _errorMessage = string.Empty;
 
+        [ObservableProperty]
+        private bool _quotaIsLoading;
+
+        [ObservableProperty]
+        private bool _quotaIsSaving;
+
+        [ObservableProperty]
+        private bool _quotaHasError;
+
+        [ObservableProperty]
+        private string _quotaErrorMessage = string.Empty;
+
+        [ObservableProperty]
+        private int _quotaStudentCount;
+
+        [ObservableProperty]
+        private ObservableCollection<TimeSlotQuotaItem> _quotaItems = new();
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(QuotaShowContent))]
+        [NotifyPropertyChangedFor(nameof(QuotaShowSaveButton))]
+        private bool _quotaContentLoaded;
+
+        public string QuotaClassName => _configService.Config.BindInfo?.ClassName ?? "未绑定";
+        public bool QuotaShowContent => !QuotaIsLoading && !QuotaHasError && QuotaContentLoaded;
+        public bool QuotaShowSaveButton => !QuotaIsLoading && !QuotaIsSaving && QuotaItems.Count > 0;
+
         public ICommand UnbindCommand { get; }
+
+        private RelayCommand? _saveQuotaCommand;
+        public RelayCommand SaveQuotaCommand => _saveQuotaCommand ??= new RelayCommand(OnSaveQuota, CanSaveQuota);
 
         public event Action? RequestLogout;
         public event Action<int, string>? RequestOpenScheduleConfig;
@@ -55,11 +88,11 @@ namespace Nexus.ViewModels.Pages
             _configService = configService;
             _authService = authService;
             _scheduleService = scheduleService;
+            _httpService = authService;
 
             _autoStart = CheckAutoStart();
             UnbindCommand = new RelayCommand(OnUnbind);
             
-            // 初始化时通知命令重新评估
             OpenScheduleConfigCommand.NotifyCanExecuteChanged();
         }
 
@@ -67,9 +100,11 @@ namespace Nexus.ViewModels.Pages
         {
             if (IsBound && ClassId > 0)
             {
-                await LoadScheduleCompletenessAsync();
+                await Task.WhenAll(LoadScheduleCompletenessAsync(), LoadQuotasAsync());
             }
         }
+
+        #region 周期排班
 
         private async Task LoadScheduleCompletenessAsync()
         {
@@ -118,6 +153,109 @@ namespace Nexus.ViewModels.Pages
                 RequestOpenScheduleConfig?.Invoke(ClassId, ClassName);
             }
         }
+
+        #endregion
+
+        #region 时段人数配置
+
+        private async Task LoadQuotasAsync()
+        {
+            try
+            {
+                QuotaIsLoading = true;
+                QuotaHasError = false;
+                QuotaErrorMessage = string.Empty;
+
+                var response = await _httpService.GetAsync<TimeSlotQuotaItem[]>(
+                    $"/web/attendance/time-slot-quota/by-class/{ClassId}",
+                    new RequestOptions { RequireAuth = true, ShowErrorToast = false }
+                );
+
+                if (response != null && response.IsSuccess && response.Data != null)
+                {
+                    QuotaItems.Clear();
+                    foreach (var item in response.Data)
+                    {
+                        QuotaItems.Add(item);
+                    }
+
+                    if (QuotaItems.Count > 0)
+                    {
+                        QuotaStudentCount = QuotaItems[0].StudentCount;
+                    }
+                    QuotaContentLoaded = true;
+                }
+                else
+                {
+                    QuotaHasError = true;
+                    QuotaErrorMessage = response?.Msg ?? "获取时段人数配置失败";
+                }
+            }
+            catch (Exception ex)
+            {
+                QuotaHasError = true;
+                QuotaErrorMessage = "加载失败: " + ex.Message;
+            }
+            finally
+            {
+                QuotaIsLoading = false;
+            }
+        }
+
+        private bool CanSaveQuota()
+        {
+            return IsBound && ClassId > 0 && !QuotaIsLoading && !QuotaIsSaving && QuotaItems.Count > 0;
+        }
+
+        private async void OnSaveQuota()
+        {
+            if (!CanSaveQuota()) return;
+
+            try
+            {
+                QuotaIsSaving = true;
+
+                var quotas = new System.Collections.Generic.List<object>();
+                foreach (var item in QuotaItems)
+                {
+                    quotas.Add(new { id = item.Id, quota = item.Quota });
+                }
+
+                var response = await _httpService.PutAsync<object>(
+                    $"/web/attendance/time-slot-quota/by-class/{ClassId}",
+                    new { quotas },
+                    new RequestOptions { RequireAuth = true, ShowSuccessToast = true }
+                );
+
+                if (response != null && !response.IsSuccess)
+                {
+                    QuotaErrorMessage = "保存失败: " + response.Msg;
+                }
+            }
+            catch (Exception ex)
+            {
+                QuotaErrorMessage = "保存失败: " + ex.Message;
+            }
+            finally
+            {
+                QuotaIsSaving = false;
+                SaveQuotaCommand.NotifyCanExecuteChanged();
+            }
+        }
+
+        partial void OnQuotaIsLoadingChanged(bool value)
+        {
+            SaveQuotaCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnQuotaIsSavingChanged(bool value)
+        {
+            SaveQuotaCommand.NotifyCanExecuteChanged();
+        }
+
+        #endregion
+
+        #region 通用
 
         private bool CheckAutoStart()
         {
@@ -171,5 +309,18 @@ namespace Nexus.ViewModels.Pages
             _configService.ClearBindInfo();
             RequestLogout?.Invoke();
         }
+
+        #endregion
+    }
+
+    public class TimeSlotQuotaItem
+    {
+        public int Id { get; set; }
+        public int TimeSlotId { get; set; }
+        public string TimeSlotName { get; set; } = string.Empty;
+        public string StartTime { get; set; } = string.Empty;
+        public string EndTime { get; set; } = string.Empty;
+        public int Quota { get; set; }
+        public int StudentCount { get; set; }
     }
 }
