@@ -5,12 +5,10 @@
         x:Class="Nexus.Views.Widget.AttendanceDetailWindow"
         x:DataType="vm:AttendanceDetailViewModel"
         Title="考勤详情"
-        Width="480"
-        Height="680"
+        Width="500" Height="640"
         WindowStartupLocation="CenterOwner"
         CanResize="true"
-        MinWidth="400"
-        MinHeight="550"
+        MinWidth="420" MinHeight="520"
         Background="#F5F7FA">
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="0">
@@ -235,16 +233,14 @@
                 <Button Grid.Column="1"
                         Content="取消"
                         Command="{Binding CancelCommand}"
-                        Width="80"
-                        Height="36"
+                        MinWidth="72" Height="34"
                         Background="#E0E0E0"
                         Foreground="#424242"
                         CornerRadius="6"/>
                 <Button Grid.Column="2"
                         Content="提交考勤"
                         Command="{Binding SaveCommand}"
-                        Width="100"
-                        Height="36"
+                        MinWidth="90" Height="34"
                         Background="#1976D2"
                         Foreground="White"
                         CornerRadius="6"
@@ -267,7 +263,7 @@
                 Background="#80000000"
                 IsVisible="{Binding ShowAddStudentDialog}"
                 ZIndex="100">
-            <Border Background="White" CornerRadius="12" Width="320" Padding="0">
+            <Border Background="White" CornerRadius="12" Width="340" MinWidth="300" Padding="0">
                 <Grid RowDefinitions="Auto,*,Auto">
                     <Border Grid.Row="0" Background="#F5F5F5" Padding="16,12" CornerRadius="12,12,0,0">
                         <TextBlock Text="{Binding DialogTitle}" FontSize="16" FontWeight="SemiBold" Foreground="#424242" HorizontalAlignment="Center"/>

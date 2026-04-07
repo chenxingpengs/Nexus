@@ -3,6 +3,7 @@ using Nexus.Services;
 using Nexus.Services.Http;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -49,12 +50,16 @@ namespace Nexus.ViewModels.Pages
         private string _errorMessage = string.Empty;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(QuotaShowContent))]
+        [NotifyPropertyChangedFor(nameof(QuotaShowSaveButton))]
         private bool _quotaIsLoading;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(QuotaShowSaveButton))]
         private bool _quotaIsSaving;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(QuotaShowContent))]
         private bool _quotaHasError;
 
         [ObservableProperty]
@@ -74,6 +79,7 @@ namespace Nexus.ViewModels.Pages
         public string QuotaClassName => _configService.Config.BindInfo?.ClassName ?? "未绑定";
         public bool QuotaShowContent => !QuotaIsLoading && !QuotaHasError && QuotaContentLoaded;
         public bool QuotaShowSaveButton => !QuotaIsLoading && !QuotaIsSaving && QuotaItems.Count > 0;
+        public bool HasIncompleteQuotas => QuotaItems.Any(item => item.NeedsConfiguration);
 
         public ICommand UnbindCommand { get; }
 
@@ -184,6 +190,9 @@ namespace Nexus.ViewModels.Pages
                         QuotaStudentCount = QuotaItems[0].StudentCount;
                     }
                     QuotaContentLoaded = true;
+                    OnPropertyChanged(nameof(QuotaShowSaveButton));
+                    OnPropertyChanged(nameof(HasIncompleteQuotas));
+                    SaveQuotaCommand.NotifyCanExecuteChanged();
                 }
                 else
                 {
@@ -313,14 +322,21 @@ namespace Nexus.ViewModels.Pages
         #endregion
     }
 
-    public class TimeSlotQuotaItem
+    public partial class TimeSlotQuotaItem : ObservableObject
     {
         public int Id { get; set; }
         public int TimeSlotId { get; set; }
         public string TimeSlotName { get; set; } = string.Empty;
         public string StartTime { get; set; } = string.Empty;
         public string EndTime { get; set; } = string.Empty;
-        public int Quota { get; set; }
+
+        [ObservableProperty]
+        private int _quota;
+
         public int StudentCount { get; set; }
+        
+        public int InheritClassSize { get; set; }
+        
+        public bool NeedsConfiguration => InheritClassSize == 0 && Quota == 0;
     }
 }

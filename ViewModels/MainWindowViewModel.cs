@@ -140,6 +140,34 @@ namespace Nexus.ViewModels
             set => SetProperty(ref _totalSlotsCount, value);
         }
 
+        private bool _hasMissingSlots;
+        public bool HasMissingSlots
+        {
+            get => _hasMissingSlots;
+            set => SetProperty(ref _hasMissingSlots, value);
+        }
+
+        private bool _hasIncompleteQuotas;
+        public bool HasIncompleteQuotas
+        {
+            get => _hasIncompleteQuotas;
+            set => SetProperty(ref _hasIncompleteQuotas, value);
+        }
+
+        private List<IncompleteQuotaItem> _incompleteQuotaItems = new();
+        public List<IncompleteQuotaItem> IncompleteQuotaItems
+        {
+            get => _incompleteQuotaItems;
+            set => SetProperty(ref _incompleteQuotaItems, value);
+        }
+
+        private int _incompleteQuotasCount;
+        public int IncompleteQuotasCount
+        {
+            get => _incompleteQuotasCount;
+            set => SetProperty(ref _incompleteQuotasCount, value);
+        }
+
         private string _errorMessage = string.Empty;
         public string ErrorMessage
         {
@@ -668,26 +696,53 @@ namespace Nexus.ViewModels
                 StatusMessage = "正在检查排班配置...";
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 开始检查排班配置, classId={classId}");
                 
+                StatusMessage = "正在检查配置完整性...";
+                
                 ScheduleCompletenessModel? completeness = null;
+                QuotaCompletenessModel? quotaCompleteness = null;
+                
                 try
                 {
-                    completeness = await _scheduleService.CheckCompletenessAsync(classId);
+                    var scheduleTask = _scheduleService.CheckCompletenessAsync(classId);
+                    var quotaTask = _scheduleService.CheckQuotaCompletenessAsync(classId);
+                    
+                    await Task.WhenAll(scheduleTask, quotaTask);
+                    
+                    completeness = scheduleTask.Result;
+                    quotaCompleteness = quotaTask.Result;
+                    
                     System.Diagnostics.Debug.WriteLine($"[Nexus] 排班检查完成: completeness={(completeness != null ? $"IsComplete={completeness.IsComplete}, MissingSlots={completeness.MissingSlots?.Count ?? 0}" : "null")}");
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 时段人数检查完成: quotaCompleteness={(quotaCompleteness != null ? $"IsComplete={quotaCompleteness.IsComplete}, IncompleteItems={quotaCompleteness.IncompleteItems?.Count ?? 0}" : "null")}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Nexus] 排班检查异常: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 配置检查异常: {ex.Message}");
                 }
 
-                if (completeness == null || !completeness.IsComplete)
+                bool scheduleIncomplete = completeness == null || !completeness.IsComplete;
+                bool quotaIncomplete = quotaCompleteness != null && !quotaCompleteness.IsComplete;
+
+                if (scheduleIncomplete || quotaIncomplete)
                 {
                     System.Diagnostics.Debug.WriteLine($"[Nexus] 设置 ScheduleIncomplete 状态");
                     BindState = BindState.ScheduleIncomplete;
-                    StatusMessage = "排班配置不完整";
+                    
                     MissingSlots = completeness?.MissingSlots ?? new List<MissingSlotModel>();
                     MissingSlotsCount = MissingSlots.Count;
                     TotalSlotsCount = completeness?.FixedTimeSlots?.Count * 5 ?? 0;
-                    System.Diagnostics.Debug.WriteLine($"[Nexus] 排班不完整: 缺失 {MissingSlotsCount} 个时段, 共 {TotalSlotsCount} 个时段");
+                    HasMissingSlots = scheduleIncomplete && MissingSlotsCount > 0;
+                    
+                    HasIncompleteQuotas = quotaIncomplete;
+                    IncompleteQuotaItems = quotaCompleteness?.IncompleteItems ?? new List<IncompleteQuotaItem>();
+                    IncompleteQuotasCount = IncompleteQuotaItems.Count;
+                    
+                    var statusParts = new List<string>();
+                    if (scheduleIncomplete) statusParts.Add("排班配置不完整");
+                    if (quotaIncomplete) statusParts.Add("时段人数未配置");
+                    StatusMessage = string.Join("，", statusParts);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 排班不完整: 缺失 {MissingSlotsCount} 个时段");
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] 时段人数不完整: 缺失 {IncompleteQuotasCount} 个时段");
                 }
                 else
                 {
@@ -946,17 +1001,35 @@ namespace Nexus.ViewModels
 
                             BindClassName = data.ClassName ?? "";
                             BindClassId = data.ClassId;
-                            StatusMessage = "授权成功！";
+                            StatusMessage = "授权成功！正在检查配置完整性...";
                             
-                            await Task.Delay(1000);
+                            await Task.Delay(500);
                             
-                            var completeness = await _scheduleService.CheckCompletenessAsync(BindClassId);
-                            if (completeness == null || !completeness.IsComplete)
+                            var scheduleTask = _scheduleService.CheckCompletenessAsync(BindClassId);
+                            var quotaTask = _scheduleService.CheckQuotaCompletenessAsync(BindClassId);
+                            await Task.WhenAll(scheduleTask, quotaTask);
+                            
+                            var completeness = scheduleTask.Result;
+                            var quotaCompleteness = quotaTask.Result;
+                            
+                            bool scheduleIncomplete = completeness == null || !completeness.IsComplete;
+                            bool quotaIncomplete = quotaCompleteness != null && !quotaCompleteness.IsComplete;
+                            
+                            if (scheduleIncomplete || quotaIncomplete)
                             {
                                 BindState = BindState.ScheduleIncomplete;
                                 MissingSlots = completeness?.MissingSlots ?? new List<MissingSlotModel>();
                                 MissingSlotsCount = MissingSlots.Count;
                                 TotalSlotsCount = completeness?.FixedTimeSlots?.Count * 5 ?? 0;
+                                HasMissingSlots = scheduleIncomplete && MissingSlotsCount > 0;
+                                HasIncompleteQuotas = quotaIncomplete;
+                                IncompleteQuotaItems = quotaCompleteness?.IncompleteItems ?? new List<IncompleteQuotaItem>();
+                                IncompleteQuotasCount = IncompleteQuotaItems.Count;
+                                
+                                var statusParts = new List<string>();
+                                if (scheduleIncomplete) statusParts.Add("排班配置不完整");
+                                if (quotaIncomplete) statusParts.Add("时段人数未配置");
+                                StatusMessage = string.Join("，", statusParts);
                             }
                             else
                             {

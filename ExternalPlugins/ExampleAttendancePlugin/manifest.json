@@ -1,0 +1,32 @@
+{
+  "id": "com.example.attendance-alert",
+  "name": "考勤提醒增强",
+  "version": "1.0.0",
+  "description": "监听考勤和通知事件，在桌面端提供自定义提醒方式（弹窗、声音、日志等）",
+  "author": "Nexus Plugin System",
+  "entryAssembly": "ExampleAttendancePlugin.dll",
+  "entryClass": "ExampleAttendancePlugin.Plugin",
+  "dependencies": [],
+  "permissions": [
+    "websocket.subscribe",
+    "ui.notification"
+  ],
+  "capabilities": {
+    "websocketEvents": [
+      "attendance_update",
+      "notification:push",
+      "bind_notification"
+    ],
+    "views": [
+      {
+        "id": "alert-settings",
+        "title": "提醒设置",
+        "location": "SettingsPage",
+        "icon": "ri:notification-3-line"
+      }
+    ],
+    "widgets": [],
+    "menuItems": []
+  },
+  "minHostVersion": "2.10.0"
+}

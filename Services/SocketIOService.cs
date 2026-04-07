@@ -469,6 +469,20 @@ namespace Nexus.Services
             }
         }
 
+        public async Task<(bool Success, string? ErrorMessage)> PluginEmitAsync(string eventName, object data, int maxRetries = 3)
+        {
+            return await SendAsync(eventName, data, maxRetries);
+        }
+
+        public bool PluginIsConnected => IsConnected;
+
+        public string? PluginCurrentDeviceId { get; private set; }
+
+        public void SetPluginDeviceId(string deviceId)
+        {
+            PluginCurrentDeviceId = deviceId;
+        }
+
         public void Dispose()
         {
             Dispose(disposing: true);

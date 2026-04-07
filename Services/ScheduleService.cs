@@ -40,6 +40,29 @@ public class ScheduleService : HttpService
         return null;
     }
 
+    public async Task<QuotaCompletenessModel?> CheckQuotaCompletenessAsync(int classId)
+    {
+        System.Diagnostics.Debug.WriteLine($"[ScheduleService] CheckQuotaCompletenessAsync 开始, classId={classId}");
+
+        LoadingStateChanged?.Invoke(true);
+        StatusChanged?.Invoke("正在检查时段人数配置...");
+
+        var response = await GetAsync<QuotaCompletenessModel>(
+            $"/web/attendance/time-slot-quota/completeness/{classId}",
+            new RequestOptions { OperationName = "检查时段人数配置" });
+
+        LoadingStateChanged?.Invoke(false);
+
+        if (response?.IsSuccess == true && response.Data != null)
+        {
+            StatusChanged?.Invoke(response.Data.IsComplete ? "时段人数配置完整" : "时段人数配置不完整");
+            return response.Data;
+        }
+
+        StatusChanged?.Invoke(response?.Msg ?? "检查失败");
+        return null;
+    }
+
     public async Task<List<PeriodicRuleModel>?> GetPeriodicRulesAsync(int classId)
     {
         LoadingStateChanged?.Invoke(true);

@@ -5,6 +5,7 @@ using Nexus.Services;
 using Nexus.Services.Http;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Nexus.ViewModels.Pages
@@ -20,12 +21,16 @@ namespace Nexus.ViewModels.Pages
         public bool IsBound => _configService.Config.IsBound;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowContent))]
+        [NotifyPropertyChangedFor(nameof(ShowSaveButton))]
         private bool _isLoading;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowSaveButton))]
         private bool _isSaving;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ShowContent))]
         private bool _hasError;
 
         [ObservableProperty]
@@ -44,6 +49,7 @@ namespace Nexus.ViewModels.Pages
 
         public bool ShowContent => !IsLoading && !HasError && ContentLoaded;
         public bool ShowSaveButton => !IsLoading && !IsSaving && QuotaItems.Count > 0;
+        public bool HasIncompleteQuotas => QuotaItems.Any(item => item.NeedsConfiguration);
 
         private RelayCommand? _saveCommand;
         public RelayCommand SaveCommand => _saveCommand ??= new RelayCommand(OnSave, CanSave);
@@ -89,6 +95,9 @@ namespace Nexus.ViewModels.Pages
                         StudentCount = QuotaItems[0].StudentCount;
                     }
                     ContentLoaded = true;
+                    OnPropertyChanged(nameof(ShowSaveButton));
+                    OnPropertyChanged(nameof(HasIncompleteQuotas));
+                    SaveCommand.NotifyCanExecuteChanged();
                 }
                 else
                 {

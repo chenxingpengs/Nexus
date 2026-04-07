@@ -5,7 +5,11 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using Nexus.Models.Schedule;
+using Nexus.Plugins.Contracts;
+using Nexus.Plugins.Core;
+using Nexus.Plugins.Services;
 using Nexus.Services;
 using Nexus.Services.Http;
 using Nexus.Services.Widget;
@@ -35,6 +39,11 @@ namespace Nexus
         private PasswordService? _passwordService;
         private ProcessProtectionService? _processProtectionService;
         private MainView? _mainView;
+
+        internal static PluginHost? PluginHostInstance { get; private set; }
+        internal static WebSocketBridgeService? WSBridgeInstance { get; private set; }
+        internal static PluginService? PluginServiceInstance { get; private set; }
+        internal static PluginUIService? PluginUIServiceInstance { get; private set; }
 
         public override void Initialize()
         {
@@ -83,6 +92,7 @@ namespace Nexus
         {
             _processProtectionService?.DisableProtection();
             _processProtectionService?.Dispose();
+            PluginServiceInstance?.Dispose();
         }
 
         private Window CreateLoadingWindow()
@@ -381,8 +391,42 @@ namespace Nexus
             System.Diagnostics.Debug.WriteLine("[Nexus] 进程保护已启用");
 
             _ = InitializeWidgetAsync();
+            _ = InitializePluginSystemAsync();
 
             closeWindow?.Close();
+        }
+
+        private async Task InitializePluginSystemAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[Nexus] 正在初始化插件系统...");
+
+                var hostServices = new ServiceCollection();
+                hostServices.AddSingleton(_configService!);
+                hostServices.AddSingleton(_toastService!);
+                hostServices.AddSingleton(_authService!);
+
+                var pluginDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExternalPlugins");
+                var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins", "Config");
+
+                PluginHostInstance = new PluginHost(pluginDir, configDir, hostServices.BuildServiceProvider());
+                WSBridgeInstance = new WebSocketBridgeService(PluginHostInstance);
+                PluginServiceInstance = new PluginService(PluginHostInstance, WSBridgeInstance);
+                PluginUIServiceInstance = new PluginUIService(PluginHostInstance);
+
+                var appServices = new ServiceCollection();
+                await PluginServiceInstance.InitializeAsync(appServices);
+
+                PluginUIServiceInstance.CollectAllUIExtensions();
+
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 插件系统初始化完成，已加载 {PluginHostInstance.LoadedPlugins.Count} 个插件");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 插件系统初始化失败: {ex.Message}");
+                _toastService?.ShowError($"插件系统初始化失败: {ex.Message}");
+            }
         }
 
         private async Task HandleExitRequest(IClassicDesktopStyleApplicationLifetime desktop)

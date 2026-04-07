@@ -4,7 +4,8 @@
         x:Class="Nexus.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Nexus - 设备绑定"
-        Width="800" Height="650"
+        Width="820" Height="660"
+        MinWidth="700" MinHeight="540"
         WindowStartupLocation="CenterScreen"
         Background="#F5F5F5">
 
@@ -22,7 +23,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="40">
+        <Grid Grid.Row="1" Margin="24">
             
             <Panel IsVisible="{Binding IsShowSelectBindMode}" ZIndex="1">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="40">
@@ -35,9 +36,9 @@
                     
                     <StackPanel Spacing="20" HorizontalAlignment="Center">
                         <Button Command="{Binding SelectQrCodeBindCommand}"
-                                Width="320" Height="80" FontSize="16" CornerRadius="12"
+                                MinWidth="280" Height="72" FontSize="16" CornerRadius="12"
                                 Background="#1976D2" Foreground="#FFFFFF"
-                                HorizontalAlignment="Center">
+                                HorizontalAlignment="Stretch" MaxWidth="360">
                             <StackPanel Orientation="Horizontal" Spacing="15">
                                 <TextBlock Text="&#xE8F3;" FontSize="28" FontFamily="Segoe MDL2 Assets" 
                                            VerticalAlignment="Center"/>
@@ -49,10 +50,10 @@
                         </Button>
                         
                         <Button Command="{Binding SelectAuthorizationBindCommand}"
-                                Width="320" Height="80" FontSize="16" CornerRadius="12"
+                                MinWidth="280" Height="72" FontSize="16" CornerRadius="12"
                                 Background="#FFFFFF" Foreground="#333333"
                                 BorderBrush="#E0E0E0" BorderThickness="1"
-                                HorizontalAlignment="Center">
+                                HorizontalAlignment="Stretch" MaxWidth="360">
                             <StackPanel Orientation="Horizontal" Spacing="15">
                                 <TextBlock Text="&#xE776;" FontSize="28" FontFamily="Segoe MDL2 Assets" 
                                            VerticalAlignment="Center" Foreground="#1976D2"/>
@@ -110,8 +111,8 @@
                                Foreground="#888888" HorizontalAlignment="Center"/>
                     
                     <Button Command="{Binding SelectQrCodeBindCommand}"
-                            Content="切换到扫码绑定" 
-                            Width="150" Height="40" FontSize="14" CornerRadius="6"
+                            Content="切换到扫码绑定"
+                            MinWidth="130" Height="36" FontSize="14" CornerRadius="6"
                             Background="Transparent" Foreground="#1976D2"
                             BorderBrush="#1976D2" BorderThickness="1"
                             HorizontalAlignment="Center"/>
@@ -133,7 +134,7 @@
                     
                     <Border Background="#FFFFFF" CornerRadius="12" Padding="20" 
                             BoxShadow="0 4 12 0 #20000000">
-                        <Image Width="250" Height="250" Source="{Binding QrCodeImage}"/>
+                        <Image Width="220" Height="220" Source="{Binding QrCodeImage}"/>
                     </Border>
                     
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
@@ -247,24 +248,69 @@
                     
                     <Panel IsVisible="{Binding IsShowScheduleIncomplete}">
                         <Border Background="#FFF3E0" CornerRadius="12" Padding="20" 
-                                BorderBrush="#FF9800" BorderThickness="1" HorizontalAlignment="Center" MaxWidth="450">
+                                BorderBrush="#FF9800" BorderThickness="1" HorizontalAlignment="Center" MaxWidth="480">
                             <StackPanel Spacing="15">
                                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                                     <TextBlock Text="&#xE7BA;" FontSize="20" Foreground="#FF9800" 
                                                FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
-                                    <TextBlock Text="排班配置不完整" FontSize="18" FontWeight="SemiBold" 
+                                    <TextBlock Text="配置不完整" FontSize="18" FontWeight="SemiBold" 
                                                Foreground="#E65100" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 
-                                <TextBlock TextAlignment="Center" FontSize="14" Foreground="#666666" TextWrapping="Wrap">
-                                    <Run Text="当前班级有"/>
-                                    <Run Text="{Binding MissingSlotsCount}" FontWeight="Bold" Foreground="#FF9800"/>
-                                    <Run Text="个时段未配置排班，共"/>
-                                    <Run Text="{Binding TotalSlotsCount}" FontWeight="Bold"/>
-                                    <Run Text="个时段"/>
-                                </TextBlock>
+                                <Panel IsVisible="{Binding HasMissingSlots}">
+                                    <Border Background="#FFFFFF" CornerRadius="8" Padding="12" Margin="0,0,0,5">
+                                        <StackPanel Spacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="&#xE8FD;" FontSize="14" Foreground="#FF9800" 
+                                                           FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                                <TextBlock Text="周期排班" FontSize="14" FontWeight="Medium" 
+                                                           Foreground="#333333" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock FontSize="13" Foreground="#666666" TextWrapping="Wrap">
+                                                <Run Text="有"/>
+                                                <Run Text="{Binding MissingSlotsCount}" FontWeight="Bold" Foreground="#FF9800"/>
+                                                <Run Text="个时段未配置排班，共"/>
+                                                <Run Text="{Binding TotalSlotsCount}" FontWeight="Bold"/>
+                                                <Run Text="个时段"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </Panel>
                                 
-                                <TextBlock Text="建议现在配置周期性排班，否则考勤功能可能无法正常使用"
+                                <Panel IsVisible="{Binding HasIncompleteQuotas}">
+                                    <Border Background="#FFFFFF" CornerRadius="8" Padding="12" Margin="0,0,0,5">
+                                        <StackPanel Spacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="&#xE7BE;" FontSize="14" Foreground="#FF9800" 
+                                                           FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                                <TextBlock Text="时段人数" FontSize="14" FontWeight="Medium" 
+                                                           Foreground="#333333" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock FontSize="13" Foreground="#666666" TextWrapping="Wrap">
+                                                <Run Text="有"/>
+                                                <Run Text="{Binding IncompleteQuotasCount}" FontWeight="Bold" Foreground="#FF9800"/>
+                                                <Run Text="个时段未配置应到人数"/>
+                                            </TextBlock>
+                                            <ItemsControl ItemsSource="{Binding IncompleteQuotaItems}" Margin="0,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock FontSize="12" Foreground="#888888" Margin="0,2,0,0">
+                                                            <Run Text="• "/>
+                                                            <Run Text="{Binding TimeSlotName}"/>
+                                                            <Run Text=" ("/>
+                                                            <Run Text="{Binding StartTime}"/>
+                                                            <Run Text="-"/>
+                                                            <Run Text="{Binding EndTime}"/>
+                                                            <Run Text=")"/>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </Panel>
+                                
+                                <TextBlock Text="建议现在完善配置，否则考勤功能可能无法正常使用"
                                            FontSize="12" Foreground="#888888" TextAlignment="Center" TextWrapping="Wrap"/>
                                 
                                 <StackPanel Spacing="10" Margin="0,10,0,0">
@@ -275,7 +321,7 @@
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <TextBlock Text="&#xE8FD;" FontSize="16" FontFamily="Segoe MDL2 Assets" 
                                                        VerticalAlignment="Center"/>
-                                            <TextBlock Text="立即配置周期性排班" VerticalAlignment="Center"/>
+                                            <TextBlock Text="立即配置" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                     
@@ -315,7 +361,7 @@
                     </StackPanel>
                     
                     <Button Content="重新尝试" Command="{Binding RefreshTokenCommand}"
-                            Width="150" Height="45" FontSize="16" CornerRadius="8"
+                            MinWidth="120" Height="40" FontSize="16" CornerRadius="8"
                             Background="#1976D2" Foreground="#FFFFFF"
                             HorizontalAlignment="Center"
                             IsVisible="{Binding IsShowError}"
@@ -328,12 +374,12 @@
                 BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
                 <Button Content="刷新二维码" Command="{Binding RefreshTokenCommand}"
-                        Width="130" Height="40" FontSize="14" CornerRadius="6"
+                        MinWidth="110" Height="36" FontSize="14" CornerRadius="6"
                         Background="#1976D2" Foreground="#FFFFFF"
                         IsVisible="{Binding IsShowQrCode}"/>
-                
+
                 <Button Content="重新绑定" Command="{Binding RefreshTokenCommand}"
-                        Width="130" Height="40" FontSize="14" CornerRadius="6"
+                        MinWidth="110" Height="36" FontSize="14" CornerRadius="6"
                         Background="#1976D2" Foreground="#FFFFFF"
                         IsVisible="{Binding IsShowBindSuccess}"/>
             </StackPanel>

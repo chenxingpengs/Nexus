@@ -17,7 +17,7 @@
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <TextBlock Text="{Binding Temperature, StringFormat={}{0:F0}}"
-                                   FontSize="36"
+                                   FontSize="32"
                                    FontWeight="Bold"
                                    Foreground="#1976D2"/>
                         <TextBlock Text="°C"

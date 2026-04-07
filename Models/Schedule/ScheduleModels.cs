@@ -119,6 +119,30 @@ namespace Nexus.Models.Schedule
         public Dictionary<string, string>? WeekdayNames { get; set; }
     }
 
+    public class QuotaCompletenessModel
+    {
+        [JsonPropertyName("isComplete")]
+        public bool IsComplete { get; set; }
+
+        [JsonPropertyName("incompleteItems")]
+        public List<IncompleteQuotaItem> IncompleteItems { get; set; } = new();
+    }
+
+    public class IncompleteQuotaItem
+    {
+        [JsonPropertyName("timeSlotId")]
+        public int TimeSlotId { get; set; }
+
+        [JsonPropertyName("timeSlotName")]
+        public string TimeSlotName { get; set; } = string.Empty;
+
+        [JsonPropertyName("startTime")]
+        public string StartTime { get; set; } = string.Empty;
+
+        [JsonPropertyName("endTime")]
+        public string EndTime { get; set; } = string.Empty;
+    }
+
     public class AddPeriodicRuleRequest
     {
         [JsonPropertyName("class_id")]

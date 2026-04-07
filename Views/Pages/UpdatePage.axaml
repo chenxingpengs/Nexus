@@ -68,7 +68,7 @@
                     </StackPanel>
 
                     <Border Background="#F5F5F5" CornerRadius="8" Padding="16">
-                        <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto">
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="版本号" Foreground="#757575" FontSize="13"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LatestVersion}" FontSize="14" Foreground="#424242" FontWeight="Medium"/>
 

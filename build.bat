@@ -32,12 +32,25 @@ set /p RELEASE_NOTES="> "
 
 :skip_notes
 
+set CERT_PATH=certificates\NexusCodeSigning.pfx
+set DO_SIGN=0
+
+if exist "%CERT_PATH%" (
+    echo.
+    set /p DO_SIGN_PROMPT="Certificate found. Sign the application? (Y/N): "
+    if /i "!DO_SIGN_PROMPT!"=="Y" set DO_SIGN=1
+)
+
+if "%DO_SIGN%"=="1" (
+    set /p CERT_PASSWORD="Enter certificate password: "
+)
+
 set OUTPUT_DIR=Output
 set PUBLISH_DIR=bin\Release\net8.0-windows\win-x64\publish
 
 echo.
 echo ========================================
-echo [1/5] Cleaning old files...
+echo [1/6] Cleaning old files...
 echo ========================================
 if exist "%PUBLISH_DIR%" rmdir /s /q "%PUBLISH_DIR%"
 if exist "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64" rmdir /s /q "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64"
@@ -47,7 +60,7 @@ if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 echo.
 echo ========================================
-echo [2/5] Updating version in files...
+echo [2/6] Updating version in files...
 echo ========================================
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "update-version.ps1" -Version "%VERSION%"
@@ -59,7 +72,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ========================================
-echo [3/5] Restoring and publishing...
+echo [3/6] Restoring and publishing...
 echo ========================================
 dotnet restore
 if %errorlevel% neq 0 (
@@ -77,11 +90,50 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ========================================
-echo [4/5] Building packages...
+echo [4/6] Signing application...
+echo ========================================
+
+if "%DO_SIGN%"=="1" (
+    echo Signing published files...
+    
+    set SIGNTOOL_PATH=
+    for /f "delims=" %%i in ('dir /b /ad "%ProgramFiles(x86)%\Windows Kits\10\bin\10.*" 2^>nul') do (
+        if exist "%ProgramFiles(x86)%\Windows Kits\10\bin\%%i\x64\signtool.exe" (
+            set SIGNTOOL_PATH=%ProgramFiles(x86)%\Windows Kits\10\bin\%%i\x64\signtool.exe
+        )
+    )
+    
+    if exist "%SIGNTOOL_PATH%" (
+        echo Using SignTool: %SIGNTOOL_PATH%
+        
+        echo Signing EXE files...
+        for /r "%PUBLISH_DIR%" %%f in (*.exe) do (
+            echo   Signing: %%~nxf
+            "%SIGNTOOL_PATH%" sign /f "%CERT_PATH%" /p "%CERT_PASSWORD%" /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "%%f"
+        )
+        
+        echo Signing DLL files...
+        for /r "%PUBLISH_DIR%" %%f in (*.dll) do (
+            echo   Signing: %%~nxf
+            "%SIGNTOOL_PATH%" sign /f "%CERT_PATH%" /p "%CERT_PASSWORD%" /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "%%f"
+        )
+        
+        echo Signing completed!
+    ) else (
+        echo [WARN] SignTool not found, skipping code signing
+        echo [INFO] Please install Windows SDK to enable code signing
+    )
+) else (
+    echo Skipping code signing...
+)
+
+echo.
+echo ========================================
+echo [5/6] Building packages...
 echo ========================================
 
 echo Copying published files...
-xcopy /E /I /Y "%PUBLISH_DIR%\*" "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64\"
+xcopy /E /I /Y "%PUBLISH_DIR%\*" "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64%"
 
 echo Building Inno Setup installer...
 set ISCC_PATH=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe
@@ -95,12 +147,20 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+if "%DO_SIGN%"=="1" (
+    if exist "%SIGNTOOL_PATH%" (
+        echo Signing installer...
+        "%SIGNTOOL_PATH%" sign /f "%CERT_PATH%" /p "%CERT_PASSWORD%" /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.exe"
+        echo Installer signed!
+    )
+)
+
 echo Creating ZIP archive...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Path '%OUTPUT_DIR%\Nexus-%VERSION%-win-x64' -DestinationPath '%OUTPUT_DIR%\Nexus-%VERSION%-win-x64.zip' -Force"
 
 echo.
 echo ========================================
-echo [5/5] Post-build operations...
+echo [6/6] Post-build operations...
 echo ========================================
 
 if "%DO_UPLOAD%"=="1" (

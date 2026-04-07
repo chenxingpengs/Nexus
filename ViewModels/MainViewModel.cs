@@ -125,6 +125,7 @@ namespace Nexus.ViewModels
                 new NavigationItem { Label = "考勤配置", IconSymbol = Symbol.Calendar, Tag = "Schedule" },
                 new NavigationItem { Label = "小组件设置", IconSymbol = Symbol.Setting, Tag = "WidgetSettings" },
                 new NavigationItem { Label = "更新", IconSymbol = Symbol.Sync, Tag = "Update" },
+                new NavigationItem { Label = "插件管理", IconSymbol = Symbol.Add, Tag = "PluginManage" },
                 new NavigationItem { Label = "关于", IconSymbol = Symbol.Help, Tag = "About" }
             };
 
@@ -291,6 +292,13 @@ namespace Nexus.ViewModels
                     CurrentPage = new UpdatePage(_updateService);
                     break;
                 case 3:
+                    var pluginManagePage = new PluginManagePage
+                    {
+                        DataContext = new PluginManageViewModel(_configService)
+                    };
+                    CurrentPage = pluginManagePage;
+                    break;
+                case 4:
                     var aboutPage = new AboutPage(_configService, _authService);
                     aboutPage.RequestLogout += () => RequestLogout?.Invoke();
                     CurrentPage = aboutPage;

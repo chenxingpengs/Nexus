@@ -100,7 +100,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:WeekdayScheduleItem">
-                                                    <Grid ColumnDefinitions="80,*,Auto,40" Margin="0,4">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,4">
                                                         <TextBlock Grid.Column="0" 
                                                                    Text="{Binding WeekdayName}"
                                                                    FontSize="13"

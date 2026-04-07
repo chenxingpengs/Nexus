@@ -1,9 +1,7 @@
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using Nexus.Models.Widget;
 using Nexus.Services.Widget;
@@ -17,33 +15,16 @@ namespace Nexus.Views.Widget
         private bool _allowClose;
         private DispatcherTimer? _positionTimer;
         private double _lastHeight;
-        private const double RightOffset = 110;
-        private const double BottomOffset = 200;
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref RECT pvParam, uint fWinIni);
-
-        private const uint SPI_GETWORKAREA = 0x0030;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
+        private const double RightOffset = 16;
+        private const double BottomOffset = 80;
 
         public DesktopWidgetWindow(WidgetService widgetService)
         {
             InitializeComponent();
             _widgetService = widgetService;
-            
+
             Loaded += OnWindowLoaded;
-            
+
             ShowInTaskbar = false;
         }
 
@@ -157,55 +138,76 @@ namespace Nexus.Views.Widget
             }
         }
 
-        private RECT GetWorkingArea()
+        private PixelRect? GetWorkingArea()
         {
-            var rect = new RECT();
-            SystemParametersInfo(SPI_GETWORKAREA, 0, ref rect, 0);
-            return rect;
+            var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+            return screen?.WorkingArea;
         }
 
         private void PositionWindowInRightBottomCorner()
         {
-            var workingArea = GetWorkingArea();
-            
+            var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+            if (screen == null) return;
+
             WindowState = WindowState.Normal;
-            
             UpdateLayout();
-            
-            Width = 400;
-            
-            var windowHeight = Bounds.Height > 0 ? Bounds.Height : 400;
-            _lastHeight = windowHeight;
-            
-            var x = workingArea.Right - Width - RightOffset;
-            var y = workingArea.Bottom - windowHeight - BottomOffset;
-            
-            if (x < workingArea.Left + 10) x = workingArea.Left + 10;
-            if (y < workingArea.Top + 10) y = workingArea.Top + 10;
-            
-            Position = new PixelPoint((int)x, (int)y);
+
+            var workingArea = screen.WorkingArea;
+            var scaling = RenderScaling;
+
+            var windowWidth = Bounds.Width > 0 ? Bounds.Width * scaling : Width * scaling;
+            var windowHeight = Bounds.Height > 0 ? Bounds.Height * scaling : 400 * scaling;
+            _lastHeight = Bounds.Height > 0 ? Bounds.Height : 400;
+
+            var screenWidth = workingArea.Width;
+            var screenHeight = workingArea.Height;
+
+            var x = screenWidth - windowWidth - RightOffset;
+            var y = screenHeight - windowHeight - BottomOffset;
+
+            x = Math.Max(x, 0);
+            y = Math.Max(y, 0);
+            x = Math.Min(x, screenWidth - windowWidth);
+            y = Math.Min(y, screenHeight - windowHeight);
+
+            Position = new PixelPoint(workingArea.X + (int)x, workingArea.Y + (int)y);
+        }
+
+        private PixelPoint CalculateClampedPosition(PixelRect workingArea, double windowWidth, double windowHeight)
+        {
+            var scaling = RenderScaling;
+            var physicalWidth = windowWidth * scaling;
+            var physicalHeight = windowHeight * scaling;
+
+            var screenWidth = workingArea.Width;
+            var screenHeight = workingArea.Height;
+
+            var x = screenWidth - physicalWidth - RightOffset;
+            var y = screenHeight - physicalHeight - BottomOffset;
+
+            x = Math.Max(x, 0);
+            y = Math.Max(y, 0);
+            x = Math.Min(x, screenWidth - physicalWidth);
+            y = Math.Min(y, screenHeight - physicalHeight);
+
+            return new PixelPoint(workingArea.X + (int)x, workingArea.Y + (int)y);
         }
 
         private void RepositionWindow()
         {
             var workingArea = GetWorkingArea();
+            if (workingArea == null) return;
+
             var windowWidth = Bounds.Width;
             var windowHeight = Bounds.Height;
-            
+
             if (windowWidth <= 0 || windowHeight <= 0) return;
-            
-            var x = workingArea.Right - windowWidth - RightOffset;
-            var y = workingArea.Bottom - windowHeight - BottomOffset;
-            
-            if (x < workingArea.Left + 10) x = workingArea.Left + 10;
-            if (y < workingArea.Top + 10) y = workingArea.Top + 10;
-            
-            var newX = (int)x;
-            var newY = (int)y;
-            
-            if (Position.X != newX || Position.Y != newY)
+
+            var position = CalculateClampedPosition(workingArea.Value, windowWidth, windowHeight);
+
+            if (Position.X != position.X || Position.Y != position.Y)
             {
-                Position = new PixelPoint(newX, newY);
+                Position = position;
             }
         }
 

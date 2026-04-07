@@ -4,9 +4,10 @@
         x:Class="Nexus.Views.SplashScreen"
         x:DataType="vm:SplashScreenViewModel"
         Title="Nexus"
-        Width="700" Height="500"
+        Width="580" Height="440"
+        MinWidth="480" MinHeight="360"
         WindowStartupLocation="CenterScreen"
-        CanResize="False"
+        CanResize="True"
         Background="{DynamicResource SystemChromeLowColor}"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="PreferSystemChrome"
@@ -75,7 +76,7 @@
                     Spacing="20">
             
             <TextBlock Text="Nexus"
-                       FontSize="56"
+                       FontSize="42"
                        FontWeight="Bold"
                        Foreground="{DynamicResource SystemAccentColor}"
                        HorizontalAlignment="Center"
@@ -112,7 +113,7 @@
         <StackPanel Grid.Row="3" 
                     VerticalAlignment="Center" 
                     HorizontalAlignment="Center"
-                    Margin="0,0,0,50"
+                    Margin="0,0,0,24"
                     Spacing="12">
             
             <Button Command="{Binding StartCommand}"

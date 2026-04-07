@@ -35,7 +35,7 @@
                                    HorizontalAlignment="Right">
                             <Slider Minimum="0.3" Maximum="1" 
                                    Value="{Binding WidgetOpacity}"
-                                   Width="200"/>
+                                   MinWidth="140" Width="200"/>
                             <TextBlock Text="{Binding OpacityPercent}" 
                                        FontSize="14" 
                                        Foreground="#1976D2"

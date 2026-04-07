@@ -42,19 +42,29 @@
                         </StackPanel>
                     </Border>
 
+                    <Border Background="#FFF8E1" CornerRadius="8" Padding="12" IsVisible="{Binding HasIncompleteQuotas}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="16" Foreground="#FF9800"/>
+                            <TextBlock Text="存在未配置的时段人数，请完善配置" FontSize="13" Foreground="#E65100" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
                     <Border Background="#F5F5F5" CornerRadius="8" Padding="16" IsVisible="{Binding ShowContent}">
                         <StackPanel Spacing="12">
                             <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="时段名称" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="时间段" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0,0,0"/>
-                                <TextBlock Grid.Row="0" Grid.Column="2" Text="应到人数" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="30,0,0,0"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="时间段" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16,0,0,0"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="应到人数" FontSize="14" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0,0,0"/>
                             </Grid>
                             <ItemsControl ItemsSource="{Binding QuotaItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:TimeSlotQuotaItem">
-                                        <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto" Margin="0,8,0,0">
-                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding TimeSlotName}" FontSize="14" Foreground="#424242" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Row="0" Grid.Column="1" FontSize="13" Foreground="#757575" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0,0,0">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto" Margin="0,8,0,0">
+                                            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding TimeSlotName}" FontSize="14" Foreground="#424242" VerticalAlignment="Center"/>
+                                                <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Important}" FontSize="12" Foreground="#FF9800" IsVisible="{Binding NeedsConfiguration}"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" FontSize="13" Foreground="#757575" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16,0,0,0">
                                                 <Run Text="{Binding StartTime}"/>
                                                 <Run Text=" - "/>
                                                 <Run Text="{Binding EndTime}"/>
@@ -63,9 +73,9 @@
                                                           Value="{Binding Quota, Mode=TwoWay}"
                                                           Minimum="0"
                                                           Maximum="999"
-                                                          Width="100"
+                                                          MinWidth="80"
                                                           HorizontalAlignment="Center"
-                                                          Margin="30,0,0,0"
+                                                          Margin="20,0,0,0"
                                                           SmallChange="1"
                                                           LargeChange="5"/>
                                         </Grid>

@@ -7,10 +7,8 @@
         x:Class="Nexus.Views.ScheduleSetupWindow"
         x:DataType="vm:ScheduleSetupViewModel"
         Title="排班配置"
-        Width="700"
-        Height="600"
-        MinWidth="600"
-        MinHeight="500"
+        Width="720" Height="620"
+        MinWidth="600" MinHeight="500"
         WindowStartupLocation="CenterScreen"
         CanResize="True"
         Background="#FAFAFA">
@@ -114,7 +112,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Grid ColumnDefinitions="80,*,Auto,40" Margin="0,4">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,4">
                                                         <TextBlock Grid.Column="0" 
                                                                    Text="{Binding WeekdayName}"
                                                                    FontSize="13"
