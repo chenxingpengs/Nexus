@@ -23,6 +23,7 @@ namespace Nexus.ViewModels.Pages
         public string ServerUrl => _configService.Config.ServerUrl;
         public int ClassId => _configService.Config.BindInfo?.ClassId ?? 0;
         public bool IsBound => _configService.Config.IsBound;
+        public string MacAddress => FormatMacAddress(_configService.Config.MacAddress ?? "未检测到");
 
         [ObservableProperty]
         private bool _autoStart;
@@ -265,6 +266,19 @@ namespace Nexus.ViewModels.Pages
         #endregion
 
         #region 通用
+
+        private string FormatMacAddress(string mac)
+        {
+            if (string.IsNullOrEmpty(mac) || mac == "未检测到")
+                return "未检测到";
+
+            var cleanMac = mac.Replace(":", "").Replace("-", "").Replace(".", "");
+            if (cleanMac.Length != 12)
+                return mac;
+
+            return string.Join(":", Enumerable.Range(0, 6)
+                .Select(i => cleanMac.Substring(i * 2, 2).ToUpper()));
+        }
 
         private bool CheckAutoStart()
         {

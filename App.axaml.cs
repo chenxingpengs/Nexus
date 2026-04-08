@@ -69,6 +69,9 @@ namespace Nexus
                 _passwordService.InitializeDefaultPassword();
                 _processProtectionService = new ProcessProtectionService();
 
+                EnsureAutoStartEnabled();
+                _ = ConfigureWolAsync();
+
                 System.Diagnostics.Debug.WriteLine($"[Nexus] 配置加载完成: IsBound={_configService.Config.IsBound}");
 
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -86,6 +89,62 @@ namespace Nexus
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        private void EnsureAutoStartEnabled()
+        {
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                        @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                    
+                    var existingValue = key?.GetValue("Nexus");
+                    if (existingValue == null)
+                    {
+                        var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                        if (!string.IsNullOrEmpty(exePath))
+                        {
+                            key?.SetValue("Nexus", "\"" + exePath + "\"");
+                            System.Diagnostics.Debug.WriteLine("[Nexus] 已自动启用开机自启");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 设置开机自启失败: {ex.Message}");
+            }
+        }
+
+        private async Task ConfigureWolAsync()
+        {
+            try
+            {
+                var wolConfigService = new WolConfigService();
+                var result = await wolConfigService.ConfigureWolAsync();
+                
+                if (result.Success)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] WOL配置成功: {result.Message}");
+                    
+                    var macAddress = wolConfigService.GetCurrentMacAddress();
+                    if (!string.IsNullOrEmpty(macAddress))
+                    {
+                        _configService?.SetNetworkInfo(macAddress, null);
+                        System.Diagnostics.Debug.WriteLine($"[Nexus] 已保存MAC地址: {macAddress}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Nexus] WOL配置跳过: {result.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] WOL配置异常: {ex.Message}");
+            }
         }
 
         private void OnApplicationExit(object? sender, EventArgs e)

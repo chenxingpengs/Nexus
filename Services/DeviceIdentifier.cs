@@ -159,4 +159,7 @@ public class NetworkAdapterInfo
     public string? MacAddress { get; set; }
     public string? IpAddress { get; set; }
     public bool IsPrimary { get; set; }
+    public bool IsWolCapable { get; set; }
+    public bool IsWolEnabled { get; set; }
+    public bool IsConnected { get; set; }
 }
