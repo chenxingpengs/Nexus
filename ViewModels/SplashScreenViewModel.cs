@@ -55,6 +55,27 @@ namespace Nexus.ViewModels
             set => SetProperty(ref _showRetryButton, value);
         }
 
+        private bool _hasIncompleteData = false;
+        public bool HasIncompleteData
+        {
+            get => _hasIncompleteData;
+            set => SetProperty(ref _hasIncompleteData, value);
+        }
+
+        private string _incompleteDataMessage = "";
+        public string IncompleteDataMessage
+        {
+            get => _incompleteDataMessage;
+            set => SetProperty(ref _incompleteDataMessage, value);
+        }
+
+        private bool _canClose = true;
+        public bool CanClose
+        {
+            get => _canClose;
+            set => SetProperty(ref _canClose, value);
+        }
+
         public ICommand StartCommand { get; }
         public ICommand CloseCommand { get; }
         public ICommand RetryCommand { get; }
@@ -66,13 +87,18 @@ namespace Nexus.ViewModels
         public SplashScreenViewModel()
         {
             StartCommand = new RelayCommand(OnStart, CanStart);
-            CloseCommand = new RelayCommand(OnClose);
+            CloseCommand = new RelayCommand(OnClose, CanExecuteClose);
             RetryCommand = new RelayCommand(OnRetry);
         }
 
         private bool CanStart()
         {
             return !_isNavigating;
+        }
+
+        private bool CanExecuteClose()
+        {
+            return _canClose;
         }
 
         private void OnStart()
@@ -87,6 +113,7 @@ namespace Nexus.ViewModels
 
         private void OnClose()
         {
+            if (!_canClose) return;
             CloseRequested?.Invoke();
         }
 
@@ -118,10 +145,27 @@ namespace Nexus.ViewModels
             ShowRetryButton = false;
         }
 
+        public void SetIncompleteDataState(string message)
+        {
+            HasIncompleteData = true;
+            IncompleteDataMessage = message;
+            CanClose = false;
+            ShowCloseButton = true;
+        }
+
         public void SetSuccessState()
         {
             IsNavigating = false;
             HasError = false;
+            HasIncompleteData = false;
+            CanClose = true;
+        }
+
+        public void ClearIncompleteDataState()
+        {
+            HasIncompleteData = false;
+            IncompleteDataMessage = "";
+            CanClose = true;
         }
     }
 }

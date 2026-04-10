@@ -122,6 +122,7 @@ namespace Nexus.ViewModels
 
             NavigationItems = new ObservableCollection<NavigationItem>
             {
+                new NavigationItem { Label = "系统设置", IconSymbol = Symbol.Setting, Tag = "SystemSettings" },
                 new NavigationItem { Label = "考勤配置", IconSymbol = Symbol.Calendar, Tag = "Schedule" },
                 new NavigationItem { Label = "小组件设置", IconSymbol = Symbol.Setting, Tag = "WidgetSettings" },
                 new NavigationItem { Label = "更新", IconSymbol = Symbol.Sync, Tag = "Update" },
@@ -133,8 +134,8 @@ namespace Nexus.ViewModels
             CloseNotificationCommand = new RelayCommand(CloseNotification);
 
             LoadBindInfo();
-            _selectedNavigationItem = 0;
-            NavigateToPage(0);
+            _selectedNavigationItem = 1;
+            NavigateToPage(1);
 
             InitializeSocketIO();
             StartUpdateCheck();
@@ -281,24 +282,27 @@ namespace Nexus.ViewModels
             switch (index)
             {
                 case 0:
+                    CurrentPage = new SystemSettingsPage(new ViewModels.Pages.SystemSettingsViewModel(_configService));
+                    break;
+                case 1:
                     var schedulePage = new SettingsPage(_configService, _authService, _scheduleService);
                     schedulePage.RequestOpenScheduleConfig += OnRequestOpenScheduleConfig;
                     CurrentPage = schedulePage;
                     break;
-                case 1:
+                case 2:
                     CurrentPage = new WidgetSettingsPage(new WidgetSettingsViewModel(_configService, _widgetService!));
                     break;
-                case 2:
+                case 3:
                     CurrentPage = new UpdatePage(_updateService);
                     break;
-                case 3:
+                case 4:
                     var pluginManagePage = new PluginManagePage
                     {
                         DataContext = new PluginManageViewModel(_configService)
                     };
                     CurrentPage = pluginManagePage;
                     break;
-                case 4:
+                case 5:
                     var aboutPage = new AboutPage(_configService, _authService);
                     aboutPage.RequestLogout += () => RequestLogout?.Invoke();
                     CurrentPage = aboutPage;

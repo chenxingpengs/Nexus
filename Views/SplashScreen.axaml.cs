@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Nexus.ViewModels;
 
 namespace Nexus.Views
 {
@@ -7,6 +8,19 @@ namespace Nexus.Views
         public SplashScreen()
         {
             InitializeComponent();
+            
+            Closing += OnWindowClosing;
+        }
+
+        private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (DataContext is SplashScreenViewModel viewModel)
+            {
+                if (!viewModel.CanClose)
+                {
+                    e.Cancel = true;
+                }
+            }
         }
     }
 }
