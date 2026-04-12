@@ -101,6 +101,15 @@ namespace Nexus.Models
         [JsonPropertyName("expires_at")]
         public DateTime? ExpiresAt { get; set; }
         
+        [JsonPropertyName("alert_subtype")]
+        public string? AlertSubtype { get; set; }
+        
+        [JsonPropertyName("magnitude")]
+        public string? Magnitude { get; set; }
+        
+        [JsonPropertyName("eta")]
+        public string? Eta { get; set; }
+        
         public NotificationType NotificationType => Type?.ToLower() switch
         {
             "banner" => NotificationType.Banner,

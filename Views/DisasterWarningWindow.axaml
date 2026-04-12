@@ -23,6 +23,17 @@
                  Foreground="White" HorizontalAlignment="Center"
                  MaxWidth="900" />
 
+      <StackPanel x:Name="ExtraInfoPanel" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="40" IsVisible="False">
+        <StackPanel Orientation="Vertical" Spacing="8">
+          <TextBlock x:Name="MagnitudeLabel" Text="震级" FontSize="20" Foreground="White" Opacity="0.8" HorizontalAlignment="Center" />
+          <TextBlock x:Name="MagnitudeText" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+        </StackPanel>
+        <StackPanel x:Name="EtaPanel" Orientation="Vertical" Spacing="8" IsVisible="False">
+          <TextBlock x:Name="EtaLabel" Text="预计到达时间" FontSize="20" Foreground="White" Opacity="0.8" HorizontalAlignment="Center" />
+          <TextBlock x:Name="EtaText" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+        </StackPanel>
+      </StackPanel>
+
       <TextBlock x:Name="InstructionText" FontSize="24" TextWrapping="Wrap"
                  Foreground="White" HorizontalAlignment="Center"
                  MaxWidth="900" FontStyle="Italic" />

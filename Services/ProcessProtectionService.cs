@@ -285,7 +285,7 @@ namespace Nexus.Services
             {
                 Debug.WriteLine("[ProcessProtection] 检测到关机/注销事件，正在取消关键进程状态...");
                 DisableCriticalProcessFast();
-                return true;
+                return false;
             }
 
             return false;
@@ -299,8 +299,6 @@ namespace Nexus.Services
 
         private void DisableCriticalProcessFast()
         {
-            if (!_isCritical) return;
-
             try
             {
                 EnableSeDebugPrivilege();
@@ -311,6 +309,10 @@ namespace Nexus.Services
                 {
                     _isCritical = false;
                     Debug.WriteLine("[ProcessProtection] 关键进程状态已快速取消");
+                }
+                else
+                {
+                    Debug.WriteLine($"[ProcessProtection] 取消关键进程失败: 0x{result:X8}");
                 }
             }
             catch (Exception ex)

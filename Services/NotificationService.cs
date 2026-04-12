@@ -122,7 +122,7 @@ namespace Nexus.Services
                             
                         case Models.NotificationType.AirRaidAlert:
                             ShowDisasterWarningWindow(notification);
-                            PlayAirRaidAlertSound();
+                            PlayAirRaidAlertSound(notification.AlertSubtype);
                             break;
                             
                         case Models.NotificationType.EarthquakeWarning:
@@ -165,9 +165,16 @@ namespace Nexus.Services
             _soundService.PlaySound("fire_alarm.mp3", loop: true, volume: 1.0f);
         }
         
-        private void PlayAirRaidAlertSound()
+        private void PlayAirRaidAlertSound(string? alertSubtype = null)
         {
-            _soundService.PlaySound("air_raid_alert.mp3", loop: true, volume: 1.0f);
+            var soundFile = alertSubtype?.ToLower() switch
+            {
+                "pre_warning" => "air_raid_pre_warning.mp3",
+                "air_raid" => "air_raid_attack.mp3",
+                "all_clear" => "air_raid_all_clear.mp3",
+                _ => "air_raid_alert.mp3"
+            };
+            _soundService.PlaySound(soundFile, loop: true, volume: 1.0f);
         }
         
         private void PlayEarthquakeWarningSound()
