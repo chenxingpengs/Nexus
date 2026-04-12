@@ -373,7 +373,7 @@ public class UpdateService : HttpService
 
     public bool InstallUpdate(string filePath)
     {
-        SetStatus(UpdateStatus.Installing, "正在安装更新...");
+        SetStatus(UpdateStatus.Installing, "正在启动安装程序...");
 
         try
         {
@@ -391,14 +391,31 @@ public class UpdateService : HttpService
 
             if (filePath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             {
-                processStartInfo.Arguments = "/quiet /norestart";
+                processStartInfo.FileName = "msiexec.exe";
+                processStartInfo.Arguments = $"/i \"{filePath}\" /quiet /norestart";
             }
             else if (filePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                processStartInfo.Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART";
+                processStartInfo.Arguments = GetExeSilentArgs(filePath);
             }
 
-            Process.Start(processStartInfo);
+            var process = Process.Start(processStartInfo);
+            if (process == null)
+            {
+                SetStatus(UpdateStatus.Error, "无法启动安装程序");
+                return false;
+            }
+
+            SetStatus(UpdateStatus.Installing, "正在静默安装更新...");
+            
+            System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    System.Environment.Exit(0);
+                });
+            });
+
             return true;
         }
         catch (Exception ex)
@@ -407,6 +424,18 @@ public class UpdateService : HttpService
             SetStatus(UpdateStatus.Error, $"安装失败: {ex.Message}");
             return false;
         }
+    }
+
+    private string GetExeSilentArgs(string filePath)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
+        
+        if (fileName.StartsWith("nexus-") || fileName.Contains("setup") || fileName.Contains("install"))
+        {
+            return "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-";
+        }
+        
+        return "/S";
     }
 
     public void SkipVersion(string version)

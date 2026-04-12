@@ -179,7 +179,26 @@ namespace Nexus.Services
                             : $"{notification.Title}。{notification.Content}";
                         var voice = speakConfig?.SpeakVoice ?? "xiaoxiao";
                         var rate = speakConfig?.SpeakRate ?? 1;
+                        
+                        bool needRestoreVolume = false;
+                        if (notificationType != Models.NotificationType.FireAlarm &&
+                            notificationType != Models.NotificationType.AirRaidAlert &&
+                            notificationType != Models.NotificationType.EarthquakeWarning)
+                        {
+                            _volumeControlService.MaximizeVolume();
+                            needRestoreVolume = true;
+                        }
+                        
                         TTS.Speak(speakText, voice: voice, rate: rate);
+                        
+                        if (needRestoreVolume)
+                        {
+                            _ = Task.Run(async () =>
+                            {
+                                await Task.Delay(500);
+                                _volumeControlService.RestoreVolume();
+                            });
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -395,7 +414,7 @@ namespace Nexus.Services
             {
                 try
                 {
-                    var window = new PageCallWindow(_socketIOService);
+                    var window = new PageCallWindow(_socketIOService, _volumeControlService);
                     window.PageCallClosed += (s, id) =>
                     {
                         Debug.WriteLine($"[NotificationService] 寻人窗口已关闭: {id}");

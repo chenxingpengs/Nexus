@@ -14,6 +14,7 @@ namespace Nexus.Views
     {
         private PageCall? _pageCall;
         private readonly SocketIOService _socketIOService;
+        private readonly VolumeControlService _volumeControlService;
         private bool _confirmed = false;
         private DispatcherTimer? _speakTimer;
         private int _speakCount = 0;
@@ -22,10 +23,11 @@ namespace Nexus.Views
 
         public event EventHandler<string>? PageCallClosed;
 
-        public PageCallWindow(SocketIOService socketIOService)
+        public PageCallWindow(SocketIOService socketIOService, VolumeControlService volumeControlService)
         {
             InitializeComponent();
             _socketIOService = socketIOService;
+            _volumeControlService = volumeControlService;
         }
 
         public void ShowPageCall(PageCall pageCall)
@@ -65,6 +67,7 @@ namespace Nexus.Views
                 speakText += $" {_pageCall.Reason}";
             }
             
+            _volumeControlService.MaximizeVolume();
             TTS.Speak(speakText, voice: "xiaoxiao", rate: 0);
             _speakCount++;
             Debug.WriteLine($"[PageCallWindow] 语音播报第 {_speakCount} 次");
@@ -82,6 +85,7 @@ namespace Nexus.Views
                     return;
                 }
                 
+                _volumeControlService.MaximizeVolume();
                 TTS.Speak(speakText, voice: "xiaoxiao", rate: 0);
                 _speakCount++;
                 Debug.WriteLine($"[PageCallWindow] 语音播报第 {_speakCount} 次");
@@ -98,6 +102,7 @@ namespace Nexus.Views
                 _speakTimer = null;
             }
             TTS.Stop();
+            _volumeControlService.RestoreVolume();
         }
 
         private async void ConfirmButton_Click(object? sender, RoutedEventArgs e)

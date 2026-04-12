@@ -163,6 +163,11 @@ namespace Nexus.ViewModels.Pages
                 if (status == UpdateStatus.DownloadComplete)
                 {
                     _downloadedFilePath = _updateService.DownloadedFilePath;
+                    
+                    if (!string.IsNullOrEmpty(_downloadedFilePath))
+                    {
+                        _ = InstallUpdateAsync();
+                    }
                 }
 
                 OnPropertyChanged(nameof(IsIdle));
@@ -242,7 +247,7 @@ namespace Nexus.ViewModels.Pages
             }
 
             Status = UpdateStatus.Installing;
-            StatusMessage = "正在安装更新...";
+            StatusMessage = "正在启动安装程序...";
             OnPropertyChanged(nameof(IsInstalling));
             OnPropertyChanged(nameof(IsDownloadComplete));
 
@@ -254,7 +259,7 @@ namespace Nexus.ViewModels.Pages
             if (!success)
             {
                 Status = UpdateStatus.Error;
-                StatusMessage = "安装失败，请重试";
+                StatusMessage = "安装程序启动失败，请重试";
                 OnPropertyChanged(nameof(HasError));
                 OnPropertyChanged(nameof(IsInstalling));
             }
