@@ -390,7 +390,7 @@ namespace Nexus
             var wolService = new WolService();
             _widgetService = new WidgetService(_configService!);
             
-            var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!, powerControlService, wolService, _widgetService, _scheduleService!, _toastService!);
+            var mainViewModel = new MainViewModel(_configService!, _authService!, _updateService!, powerControlService, wolService, _widgetService, _scheduleService!, _toastService!, _passwordService!);
             _mainView = new MainView
             {
                 DataContext = mainViewModel

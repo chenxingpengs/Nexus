@@ -22,6 +22,7 @@ namespace Nexus.ViewModels
         private readonly UpdateService _updateService;
         private readonly ScheduleService _scheduleService;
         private readonly ToastService _toastService;
+        private readonly PasswordService _passwordService;
         private SocketIOService? _socketIOService;
         private DispatcherTimer? _updateCheckTimer;
         private readonly PowerControlService _powerControlService;
@@ -109,7 +110,7 @@ namespace Nexus.ViewModels
 
         public event Action? RequestLogout;
 
-        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService, WidgetService widgetService, ScheduleService scheduleService, ToastService toastService)
+        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService, WidgetService widgetService, ScheduleService scheduleService, ToastService toastService, PasswordService passwordService)
         {
             _configService = configService;
             _authService = authService;
@@ -119,6 +120,7 @@ namespace Nexus.ViewModels
             _widgetService = widgetService;
             _scheduleService = scheduleService;
             _toastService = toastService;
+            _passwordService = passwordService;
 
             _powerControlService.PowerControlExecuted += OnPowerControlExecuted;
 
@@ -151,6 +153,7 @@ namespace Nexus.ViewModels
                 _socketIOService = new SocketIOService(config.ServerUrl);
                 _socketIOService.MessageReceived += OnSocketMessageReceived;
                 _socketIOService.NotificationReceived += OnNotificationReceived;
+                _socketIOService.PageCallReceived += OnPageCallReceived;
                 
                 _notificationService = new NotificationService(_socketIOService);
 
@@ -159,6 +162,19 @@ namespace Nexus.ViewModels
                 {
                     await _socketIOService.ConnectAsync(config.AccessToken, deviceId, "classroom_terminal");
                 }
+            }
+        }
+
+        private void OnPageCallReceived(object? sender, JsonElement data)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] 收到寻人推送: {data}");
+                _notificationService?.HandlePageCallPush(data);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] 处理寻人推送失败: {ex.Message}");
             }
         }
 
@@ -305,7 +321,7 @@ namespace Nexus.ViewModels
                     CurrentPage = pluginManagePage;
                     break;
                 case 5:
-                    var aboutPage = new AboutPage(_configService, _authService);
+                    var aboutPage = new AboutPage(_configService, _authService, _passwordService);
                     aboutPage.RequestLogout += () => RequestLogout?.Invoke();
                     CurrentPage = aboutPage;
                     break;

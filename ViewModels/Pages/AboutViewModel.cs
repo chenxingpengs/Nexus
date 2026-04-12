@@ -10,6 +10,7 @@ namespace Nexus.ViewModels.Pages
     {
         private readonly ConfigService _configService;
         private readonly AuthService _authService;
+        private readonly PasswordService _passwordService;
 
         public string VersionText { get; }
         public string DeviceName { get; }
@@ -19,11 +20,13 @@ namespace Nexus.ViewModels.Pages
         public ICommand UnbindCommand { get; }
 
         public event Action? RequestLogout;
+        public event Action<Action<bool>>? RequestPasswordVerification;
 
-        public AboutViewModel(ConfigService configService, AuthService authService)
+        public AboutViewModel(ConfigService configService, AuthService authService, PasswordService passwordService)
         {
             _configService = configService;
             _authService = authService;
+            _passwordService = passwordService;
 
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             VersionText = version != null ? $"版本 {version.Major}.{version.Minor}.{version.Build}" : "版本 1.0.0";
@@ -37,6 +40,19 @@ namespace Nexus.ViewModels.Pages
         }
 
         private void OnUnbind()
+        {
+            RequestPasswordVerification?.Invoke(OnPasswordVerified);
+        }
+
+        private void OnPasswordVerified(bool success)
+        {
+            if (success)
+            {
+                DoUnbind();
+            }
+        }
+
+        public void DoUnbind()
         {
             _configService.ClearBindInfo();
             RequestLogout?.Invoke();

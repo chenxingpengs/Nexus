@@ -125,6 +125,18 @@ namespace Nexus.ViewModels.Pages
             _githubOwner = _updateService.UpdateConfig.GitHubOwner;
             _githubRepo = _updateService.UpdateConfig.GitHubRepo;
 
+            _status = _updateService.CurrentStatus;
+            _statusMessage = _updateService.CurrentStatusMessage;
+            _availableUpdate = _updateService.CurrentUpdateInfo;
+            _downloadedFilePath = _updateService.DownloadedFilePath;
+
+            if (_updateService.CurrentProgress != null)
+            {
+                _downloadProgress = _updateService.CurrentProgress.ProgressPercentage;
+                _downloadSpeed = FormatSpeed(_updateService.CurrentProgress.SpeedBytesPerSecond);
+                _downloadedSize = $"{UpdateService.FormatFileSize(_updateService.CurrentProgress.BytesReceived)} / {UpdateService.FormatFileSize(_updateService.CurrentProgress.TotalBytes)}";
+            }
+
             CheckUpdateCommand = new AsyncRelayCommand(CheckUpdateAsync, () => !IsChecking && !IsDownloading);
             DownloadUpdateCommand = new AsyncRelayCommand(DownloadUpdateAsync, () => IsUpdateAvailable);
             CancelDownloadCommand = new RelayCommand(CancelDownload, () => IsDownloading);
@@ -142,6 +154,17 @@ namespace Nexus.ViewModels.Pages
             {
                 Status = status;
                 StatusMessage = message;
+
+                if (status == UpdateStatus.UpdateAvailable && _updateService.CurrentUpdateInfo != null)
+                {
+                    AvailableUpdate = _updateService.CurrentUpdateInfo;
+                }
+
+                if (status == UpdateStatus.DownloadComplete)
+                {
+                    _downloadedFilePath = _updateService.DownloadedFilePath;
+                }
+
                 OnPropertyChanged(nameof(IsIdle));
                 OnPropertyChanged(nameof(IsChecking));
                 OnPropertyChanged(nameof(IsUpdateAvailable));
@@ -205,12 +228,36 @@ namespace Nexus.ViewModels.Pages
 
         private async Task InstallUpdateAsync()
         {
-            if (string.IsNullOrEmpty(_downloadedFilePath)) return;
-
-            await Task.Run(() =>
+            if (string.IsNullOrEmpty(_downloadedFilePath))
             {
-                _updateService.InstallUpdate(_downloadedFilePath);
+                _downloadedFilePath = _updateService.DownloadedFilePath;
+            }
+            
+            if (string.IsNullOrEmpty(_downloadedFilePath))
+            {
+                Status = UpdateStatus.Error;
+                StatusMessage = "安装文件路径无效，请重新下载";
+                OnPropertyChanged(nameof(HasError));
+                return;
+            }
+
+            Status = UpdateStatus.Installing;
+            StatusMessage = "正在安装更新...";
+            OnPropertyChanged(nameof(IsInstalling));
+            OnPropertyChanged(nameof(IsDownloadComplete));
+
+            var success = await Task.Run(() =>
+            {
+                return _updateService.InstallUpdate(_downloadedFilePath);
             });
+
+            if (!success)
+            {
+                Status = UpdateStatus.Error;
+                StatusMessage = "安装失败，请重试";
+                OnPropertyChanged(nameof(HasError));
+                OnPropertyChanged(nameof(IsInstalling));
+            }
         }
 
         private void CancelDownload()

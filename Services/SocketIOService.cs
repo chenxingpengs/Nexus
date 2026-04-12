@@ -53,6 +53,7 @@ namespace Nexus.Services
         public event EventHandler<int>? LatencyUpdated;
         public event EventHandler<Notification>? NotificationReceived;
         public event EventHandler<JsonElement>? AttendanceUpdated;
+        public event EventHandler<JsonElement>? PageCallReceived;
 
         public bool IsConnected => _socket?.Connected ?? false;
         public int CurrentLatency => _currentLatency;
@@ -325,6 +326,26 @@ namespace Nexus.Services
                         {
                             Debug.WriteLine($"[SocketIO] 解析 attendance_update 失败: {ex.Message}");
                             ErrorOccurred?.Invoke(this, $"解析考勤更新失败: {ex.Message}");
+                        }
+                    });
+
+                    _socket.On("page_call:push", response =>
+                    {
+                        Debug.WriteLine($"[SocketIO] 收到 page_call:push: {response}");
+                        try
+                        {
+                            var json = response.GetValue().ToString();
+                            Debug.WriteLine($"[SocketIO] page_call:push JSON: {json}");
+                            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                            var doc = JsonDocument.Parse(bytes);
+                            var element = doc.RootElement.Clone();
+                            doc.Dispose();
+                            PageCallReceived?.Invoke(this, element);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[SocketIO] 解析 page_call:push 失败: {ex.Message}");
+                            ErrorOccurred?.Invoke(this, $"解析寻人推送失败: {ex.Message}");
                         }
                     });
 

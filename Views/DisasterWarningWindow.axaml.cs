@@ -13,8 +13,14 @@ namespace Nexus.Views
         private string _notificationId = string.Empty;
         private bool _isFlashing;
         private DispatcherTimer? _flashTimer;
-
+        private DispatcherTimer? _countdownTimer;
+        private int _remainingSeconds;
+        private string _currentAlertSubtype = string.Empty;
+        private string _currentType = string.Empty;
+        private string? _magnitude;
+        
         public event EventHandler<string>? WarningClosed;
+        public event EventHandler<string>? CountdownFinished;
 
         public DisasterWarningWindow()
         {
@@ -32,6 +38,10 @@ namespace Nexus.Views
         public void ShowWarning(Notification notification)
         {
             _notificationId = notification.Id;
+            _currentType = notification.Type?.ToLower() ?? string.Empty;
+            _currentAlertSubtype = notification.AlertSubtype?.ToLower() ?? string.Empty;
+            _magnitude = notification.Magnitude;
+            
             TitleText.Text = notification.Title;
             ContentText.Text = notification.Content;
 
@@ -42,11 +52,82 @@ namespace Nexus.Views
                 ConfirmButton.Foreground = new SolidColorBrush(color);
             }
 
-            SetWarningType(notification.Type, notification.AlertSubtype, notification.Magnitude, notification.Eta);
+            SetWarningType(_currentType, _currentAlertSubtype, _magnitude, notification.EtaSeconds);
+            
+            if (_currentType == "earthquake_warning" && 
+                _currentAlertSubtype == "early_warning" && 
+                notification.EtaSeconds.HasValue && 
+                notification.EtaSeconds.Value > 0)
+            {
+                StartCountdown(notification.EtaSeconds.Value);
+            }
+            
             StartFlashing();
         }
 
-        private void SetWarningType(string type, string? alertSubtype, string? magnitude, string? eta)
+        private void StartCountdown(int seconds)
+        {
+            _remainingSeconds = seconds;
+            UpdateCountdownDisplay();
+            
+            _countdownTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            
+            _countdownTimer.Tick += (s, e) =>
+            {
+                _remainingSeconds--;
+                
+                if (_remainingSeconds <= 0)
+                {
+                    StopCountdown();
+                    OnCountdownFinished();
+                }
+                else
+                {
+                    UpdateCountdownDisplay();
+                }
+            };
+            
+            _countdownTimer.Start();
+        }
+
+        private void UpdateCountdownDisplay()
+        {
+            EtaText.Text = $"{_remainingSeconds}秒";
+            
+            if (_remainingSeconds <= 10)
+            {
+                EtaText.Foreground = new SolidColorBrush(Colors.Red);
+            }
+            else if (_remainingSeconds <= 30)
+            {
+                EtaText.Foreground = new SolidColorBrush(Colors.Orange);
+            }
+        }
+
+        private void StopCountdown()
+        {
+            _countdownTimer?.Stop();
+            _countdownTimer = null;
+        }
+
+        private void OnCountdownFinished()
+        {
+            _currentAlertSubtype = "arrival";
+            
+            Dispatcher.UIThread.Post(() =>
+            {
+                WarningTypeText.Text = "🌍 地震到达报 🌍";
+                InstructionText.Text = "地震波已到达！请保持冷静，寻找掩护！";
+                EtaPanel.IsVisible = false;
+            });
+            
+            CountdownFinished?.Invoke(this, _notificationId);
+        }
+
+        private void SetWarningType(string type, string? alertSubtype, string? magnitude, int? etaSeconds)
         {
             WarningTypeText.Text = type?.ToLower() switch
             {
@@ -75,10 +156,11 @@ namespace Nexus.Views
                     MagnitudeText.Text = magnitude;
                 }
 
-                if (alertSubtype == "early_warning" && !string.IsNullOrEmpty(eta))
+                if (alertSubtype == "early_warning" && etaSeconds.HasValue && etaSeconds.Value > 0)
                 {
                     EtaPanel.IsVisible = true;
-                    EtaText.Text = eta;
+                    _remainingSeconds = etaSeconds.Value;
+                    UpdateCountdownDisplay();
                 }
             }
         }
@@ -164,6 +246,7 @@ namespace Nexus.Views
         private void ConfirmButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             StopFlashing();
+            StopCountdown();
             WarningClosed?.Invoke(this, _notificationId);
             Close();
         }
@@ -171,6 +254,7 @@ namespace Nexus.Views
         protected override void OnClosed(EventArgs e)
         {
             StopFlashing();
+            StopCountdown();
             base.OnClosed(e);
         }
     }

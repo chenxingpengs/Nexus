@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -17,11 +18,13 @@ namespace Nexus.Services
         private readonly SocketIOService _socketIOService;
         private Window? _currentWindow;
         private readonly SoundService _soundService;
+        private readonly VolumeControlService _volumeControlService;
         private readonly object _lock = new();
 
         public event EventHandler<Models.Notification>? NotificationReceived;
         public event Action? NotificationClosed;
         public event EventHandler<Models.Notification>? NotificationExpired;
+        public event EventHandler<PageCall>? PageCallReceived;
 
         public Models.Notification? CurrentNotification => _currentNotification;
         public int QueueCount => _notificationQueue.Count;
@@ -31,6 +34,7 @@ namespace Nexus.Services
         {
             _socketIOService = socketIOService;
             _soundService = new SoundService();
+            _volumeControlService = new VolumeControlService();
         }
 
         public void EnqueueNotification(Models.Notification notification)
@@ -43,6 +47,10 @@ namespace Nexus.Services
             }
 
             bool shouldShowNext;
+            bool isEmergencyBroadcast = notification.NotificationType == Models.NotificationType.FireAlarm ||
+                                        notification.NotificationType == Models.NotificationType.AirRaidAlert ||
+                                        notification.NotificationType == Models.NotificationType.EarthquakeWarning ||
+                                        notification.NotificationType == Models.NotificationType.Emergency;
 
             lock (_lock)
             {
@@ -56,6 +64,17 @@ namespace Nexus.Services
                 {
                     _notificationQueue.Enqueue(notification);
                     Debug.WriteLine($"[NotificationService] 通知入队: {notification.Title}, 队列长度: {_notificationQueue.Count}");
+                }
+
+                if (isEmergencyBroadcast && _isDisplaying)
+                {
+                    Debug.WriteLine($"[NotificationService] 应急广播，立即替换当前通知: {notification.Title}");
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _currentWindow?.Close();
+                    });
+                    _isDisplaying = false;
+                    _currentNotification = null;
                 }
 
                 shouldShowNext = !_isDisplaying;
@@ -116,18 +135,28 @@ namespace Nexus.Services
                             break;
                             
                         case Models.NotificationType.FireAlarm:
+                            _volumeControlService.MaximizeVolume();
                             ShowDisasterWarningWindow(notification);
                             PlayFireAlarmSound();
                             break;
                             
                         case Models.NotificationType.AirRaidAlert:
+                            _volumeControlService.MaximizeVolume();
                             ShowDisasterWarningWindow(notification);
                             PlayAirRaidAlertSound(notification.AlertSubtype);
                             break;
                             
                         case Models.NotificationType.EarthquakeWarning:
+                            _volumeControlService.MaximizeVolume();
                             ShowDisasterWarningWindow(notification);
-                            PlayEarthquakeWarningSound();
+                            if (notification.AlertSubtype?.ToLower() == "arrival")
+                            {
+                                PlayAirRaidAlertSound("air_raid");
+                            }
+                            else
+                            {
+                                PlayEarthquakeWarningSound();
+                            }
                             break;
                             
                         case Models.NotificationType.System:
@@ -149,7 +178,7 @@ namespace Nexus.Services
                             ? notification.Content 
                             : $"{notification.Title}。{notification.Content}";
                         var voice = speakConfig?.SpeakVoice ?? "xiaoxiao";
-                        var rate = speakConfig?.SpeakRate ?? 0;
+                        var rate = speakConfig?.SpeakRate ?? 1;
                         TTS.Speak(speakText, voice: voice, rate: rate);
                     }
                 }
@@ -214,7 +243,7 @@ namespace Nexus.Services
             _currentWindow = window;
         }
         
-        private void ShowEmergencyWindow(Models.Notification notification)
+ private void ShowEmergencyWindow(Models.Notification notification)
         {
             var window = new EmergencyWindow();
             window.EmergencyClosed += (s, id) =>
@@ -233,9 +262,26 @@ namespace Nexus.Services
             {
                 OnWindowClosed(s, id);
             };
+            window.CountdownFinished += (s, id) =>
+            {
+                OnEarthquakeCountdownFinished();
+            };
             window.ShowWarning(notification);
             window.Show();
+            window.Activate();
+            window.Topmost = true;
+            window.Focus();
             _currentWindow = window;
+        }
+        
+        private void OnEarthquakeCountdownFinished()
+        {
+            Debug.WriteLine($"[NotificationService] 地震预警倒计时结束，切换为空袭警报声音");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _soundService.StopPlayback();
+                _soundService.PlaySound("air_raid_attack.mp3", loop: true, volume: 1.0f);
+            });
         }
         
         private void ShowSystemNotification(Models.Notification notification)
@@ -268,6 +314,7 @@ namespace Nexus.Services
                 {
                     Debug.WriteLine($"[NotificationService] 关闭通知: {_currentNotification.Title}");
                     _soundService.StopPlayback();
+                    _volumeControlService.RestoreVolume();
                     NotificationClosed?.Invoke();
                     _currentNotification = null;
                 }
@@ -306,7 +353,7 @@ namespace Nexus.Services
             {
                 if (_socketIOService.IsConnected)
                 {
-                    await _socketIOService.SendAsync("notification:ack", new { notification_id = notificationId });
+                    await _socketIOService.SendAsync("notification_ack", new { notification_id = notificationId });
                     Debug.WriteLine($"[NotificationService] 发送ACK: {notificationId}");
                 }
             }
@@ -322,7 +369,7 @@ namespace Nexus.Services
             {
                 if (_socketIOService.IsConnected)
                 {
-                    await _socketIOService.SendAsync("notification:read", new { notification_id = notificationId });
+                    await _socketIOService.SendAsync("notification_read", new { notification_id = notificationId });
                     Debug.WriteLine($"[NotificationService] 发送已读: {notificationId}");
                 }
             }
@@ -336,6 +383,52 @@ namespace Nexus.Services
         {
             ClearAll();
             _soundService.Dispose();
+        }
+
+        public void ShowPageCall(PageCall pageCall)
+        {
+            Debug.WriteLine($"[NotificationService] 显示寻人窗口: {pageCall.StudentName}");
+            
+            PageCallReceived?.Invoke(this, pageCall);
+            
+            Dispatcher.UIThread.Post(() =>
+            {
+                try
+                {
+                    var window = new PageCallWindow(_socketIOService);
+                    window.PageCallClosed += (s, id) =>
+                    {
+                        Debug.WriteLine($"[NotificationService] 寻人窗口已关闭: {id}");
+                    };
+                    window.ShowPageCall(pageCall);
+                    window.Show();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[NotificationService] 显示寻人窗口失败: {ex.Message}");
+                }
+            });
+        }
+
+        public void HandlePageCallPush(JsonElement data)
+        {
+            try
+            {
+                var pageCall = JsonSerializer.Deserialize<PageCall>(data.ToString(), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                if (pageCall != null)
+                {
+                    Debug.WriteLine($"[NotificationService] 收到寻人推送: {pageCall.StudentName}");
+                    ShowPageCall(pageCall);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[NotificationService] 解析寻人数据失败: {ex.Message}");
+            }
         }
     }
 }

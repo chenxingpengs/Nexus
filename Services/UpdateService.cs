@@ -25,7 +25,61 @@ public class UpdateService : HttpService
     public event Action<UpdateProgress>? ProgressChanged;
     public event Action<UpdateInfo>? UpdateAvailable;
 
+    private UpdateStatus _currentStatus = UpdateStatus.Idle;
+    public UpdateStatus CurrentStatus
+    {
+        get => _currentStatus;
+        private set
+        {
+            if (_currentStatus != value)
+            {
+                _currentStatus = value;
+                StatusChanged?.Invoke(value, _currentStatusMessage);
+            }
+        }
+    }
+
+    private string _currentStatusMessage = "";
+    public string CurrentStatusMessage
+    {
+        get => _currentStatusMessage;
+        private set
+        {
+            _currentStatusMessage = value;
+        }
+    }
+
+    private UpdateInfo? _currentUpdateInfo;
+    public UpdateInfo? CurrentUpdateInfo
+    {
+        get => _currentUpdateInfo;
+        private set => _currentUpdateInfo = value;
+    }
+
+    private string? _downloadedFilePath;
+    public string? DownloadedFilePath
+    {
+        get => _downloadedFilePath;
+        private set => _downloadedFilePath = value;
+    }
+
+    private UpdateProgress _currentProgress = new UpdateProgress();
+    public UpdateProgress CurrentProgress => _currentProgress;
+
     public UpdateConfig UpdateConfig => _updateConfig;
+
+    private void SetStatus(UpdateStatus status, string message)
+    {
+        _currentStatus = status;
+        _currentStatusMessage = message;
+        StatusChanged?.Invoke(status, message);
+    }
+
+    private void SetProgress(UpdateProgress progress)
+    {
+        _currentProgress = progress;
+        ProgressChanged?.Invoke(progress);
+    }
 
     public UpdateService(ConfigService configService, ToastService? toastService = null) 
         : base(configService, toastService)
@@ -115,7 +169,7 @@ public class UpdateService : HttpService
 
     public async Task<UpdateInfo?> CheckForUpdateAsync()
     {
-        StatusChanged?.Invoke(UpdateStatus.Checking, "正在检查更新...");
+        SetStatus(UpdateStatus.Checking, "正在检查更新...");
 
         try
         {
@@ -137,18 +191,18 @@ public class UpdateService : HttpService
                     
                     if (waitTime.TotalMinutes > 0)
                     {
-                        StatusChanged?.Invoke(UpdateStatus.Error, $"GitHub API 速率限制，请 {waitTime.Minutes} 分钟后重试");
+                        SetStatus(UpdateStatus.Error, $"GitHub API 速率限制，请 {waitTime.Minutes} 分钟后重试");
                         return null;
                     }
                 }
                 
-                StatusChanged?.Invoke(UpdateStatus.Error, "GitHub API 速率限制，请稍后重试");
+                SetStatus(UpdateStatus.Error, "GitHub API 速率限制，请稍后重试");
                 return null;
             }
             
             if (!response.IsSuccessStatusCode)
             {
-                StatusChanged?.Invoke(UpdateStatus.Error, $"检查更新失败: HTTP {(int)response.StatusCode}");
+                SetStatus(UpdateStatus.Error, $"检查更新失败: HTTP {(int)response.StatusCode}");
                 return null;
             }
             
@@ -156,7 +210,7 @@ public class UpdateService : HttpService
 
             if (string.IsNullOrEmpty(content))
             {
-                StatusChanged?.Invoke(UpdateStatus.Error, "无法获取版本信息");
+                SetStatus(UpdateStatus.Error, "无法获取版本信息");
                 return null;
             }
 
@@ -164,7 +218,7 @@ public class UpdateService : HttpService
             if (!trimmedContent.StartsWith("{") && !trimmedContent.StartsWith("["))
             {
                 Debug.WriteLine($"[UpdateService] GitHub API 返回非 JSON 内容: {content.Substring(0, Math.Min(200, content.Length))}...");
-                StatusChanged?.Invoke(UpdateStatus.Error, "GitHub API 返回异常，可能触发了速率限制");
+                SetStatus(UpdateStatus.Error, "GitHub API 返回异常，可能触发了速率限制");
                 return null;
             }
 
@@ -175,7 +229,7 @@ public class UpdateService : HttpService
 
             if (release == null)
             {
-                StatusChanged?.Invoke(UpdateStatus.Error, "无法获取版本信息");
+                SetStatus(UpdateStatus.Error, "无法获取版本信息");
                 return null;
             }
 
@@ -188,27 +242,28 @@ public class UpdateService : HttpService
             if (CompareVersions(latestVersion, currentVersion) > 0)
             {
                 var updateInfo = ParseUpdateInfo(release);
+                _currentUpdateInfo = updateInfo;
 
                 if (_updateConfig.SkippedVersion == latestVersion)
                 {
-                    StatusChanged?.Invoke(UpdateStatus.NoUpdate, "已是最新版本");
+                    SetStatus(UpdateStatus.NoUpdate, "已是最新版本");
                     return null;
                 }
 
-                StatusChanged?.Invoke(UpdateStatus.UpdateAvailable, $"发现新版本 {latestVersion}");
+                SetStatus(UpdateStatus.UpdateAvailable, $"发现新版本 {latestVersion}");
                 UpdateAvailable?.Invoke(updateInfo);
                 return updateInfo;
             }
             else
             {
-                StatusChanged?.Invoke(UpdateStatus.NoUpdate, "已是最新版本");
+                SetStatus(UpdateStatus.NoUpdate, "已是最新版本");
                 return null;
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[UpdateService] CheckForUpdateAsync error: {ex.Message}");
-            StatusChanged?.Invoke(UpdateStatus.Error, $"检查更新失败: {ex.Message}");
+            SetStatus(UpdateStatus.Error, $"检查更新失败: {ex.Message}");
             return null;
         }
     }
@@ -240,7 +295,7 @@ public class UpdateService : HttpService
 
     public async Task<string?> DownloadUpdateAsync(UpdateInfo updateInfo, CancellationToken cancellationToken = default)
     {
-        StatusChanged?.Invoke(UpdateStatus.Downloading, "正在下载更新...");
+        SetStatus(UpdateStatus.Downloading, "正在下载更新...");
 
         var tempDir = Path.Combine(Path.GetTempPath(), "NexusUpdate");
         if (!Directory.Exists(tempDir))
@@ -277,7 +332,7 @@ public class UpdateService : HttpService
                     var elapsed = (now - startTime).TotalSeconds;
                     var speed = elapsed > 0 ? totalBytesRead / elapsed : 0;
 
-                    ProgressChanged?.Invoke(new UpdateProgress
+                    SetProgress(new UpdateProgress
                     {
                         BytesReceived = totalBytesRead,
                         TotalBytes = totalBytes,
@@ -288,19 +343,20 @@ public class UpdateService : HttpService
                 }
             }
 
-            ProgressChanged?.Invoke(new UpdateProgress
+            SetProgress(new UpdateProgress
             {
                 BytesReceived = totalBytesRead,
                 TotalBytes = totalBytes,
                 SpeedBytesPerSecond = 0
             });
 
-            StatusChanged?.Invoke(UpdateStatus.DownloadComplete, "下载完成");
+            _downloadedFilePath = filePath;
+            SetStatus(UpdateStatus.DownloadComplete, "下载完成");
             return filePath;
         }
         catch (OperationCanceledException)
         {
-            StatusChanged?.Invoke(UpdateStatus.Error, "下载已取消");
+            SetStatus(UpdateStatus.Error, "下载已取消");
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
@@ -310,20 +366,20 @@ public class UpdateService : HttpService
         catch (Exception ex)
         {
             Debug.WriteLine($"[UpdateService] DownloadUpdateAsync error: {ex.Message}");
-            StatusChanged?.Invoke(UpdateStatus.Error, $"下载失败: {ex.Message}");
+            SetStatus(UpdateStatus.Error, $"下载失败: {ex.Message}");
             return null;
         }
     }
 
     public bool InstallUpdate(string filePath)
     {
-        StatusChanged?.Invoke(UpdateStatus.Installing, "正在安装更新...");
+        SetStatus(UpdateStatus.Installing, "正在安装更新...");
 
         try
         {
             if (!File.Exists(filePath))
             {
-                StatusChanged?.Invoke(UpdateStatus.Error, "安装文件不存在");
+                SetStatus(UpdateStatus.Error, "安装文件不存在");
                 return false;
             }
 
@@ -348,7 +404,7 @@ public class UpdateService : HttpService
         catch (Exception ex)
         {
             Debug.WriteLine($"[UpdateService] InstallUpdate error: {ex.Message}");
-            StatusChanged?.Invoke(UpdateStatus.Error, $"安装失败: {ex.Message}");
+            SetStatus(UpdateStatus.Error, $"安装失败: {ex.Message}");
             return false;
         }
     }
@@ -389,6 +445,25 @@ public class UpdateService : HttpService
         _updateConfig.UseMirror = useMirror;
         _updateConfig.MirrorUrl = mirrorUrl;
         SaveUpdateConfig();
+    }
+
+    public void ResetStatus()
+    {
+        _currentStatus = UpdateStatus.Idle;
+        _currentStatusMessage = "";
+        _currentUpdateInfo = null;
+        _downloadedFilePath = null;
+        _currentProgress = new UpdateProgress();
+        StatusChanged?.Invoke(UpdateStatus.Idle, "");
+    }
+
+    public bool InstallDownloadedUpdate()
+    {
+        if (string.IsNullOrEmpty(_downloadedFilePath) || !File.Exists(_downloadedFilePath))
+        {
+            return false;
+        }
+        return InstallUpdate(_downloadedFilePath);
     }
 
     private int CompareVersions(string version1, string version2)

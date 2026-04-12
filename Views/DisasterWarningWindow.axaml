@@ -29,8 +29,8 @@
           <TextBlock x:Name="MagnitudeText" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
         </StackPanel>
         <StackPanel x:Name="EtaPanel" Orientation="Vertical" Spacing="8" IsVisible="False">
-          <TextBlock x:Name="EtaLabel" Text="预计到达时间" FontSize="20" Foreground="White" Opacity="0.8" HorizontalAlignment="Center" />
-          <TextBlock x:Name="EtaText" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+          <TextBlock x:Name="EtaLabel" Text="倒计时" FontSize="20" Foreground="White" Opacity="0.8" HorizontalAlignment="Center" />
+          <TextBlock x:Name="EtaText" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
         </StackPanel>
       </StackPanel>
 

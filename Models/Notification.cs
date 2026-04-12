@@ -108,7 +108,10 @@ namespace Nexus.Models
         public string? Magnitude { get; set; }
         
         [JsonPropertyName("eta")]
-        public string? Eta { get; set; }
+        public int? EtaSeconds { get; set; }
+        
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? Eta => EtaSeconds.HasValue ? $"{EtaSeconds.Value}秒" : null;
         
         public NotificationType NotificationType => Type?.ToLower() switch
         {

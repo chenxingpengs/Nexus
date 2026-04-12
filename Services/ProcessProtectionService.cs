@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Nexus.Services
 {
@@ -244,8 +242,6 @@ namespace Nexus.Services
         private bool _isProtected;
         private bool _isCritical;
         private bool _isDisposed;
-        private CancellationTokenSource? _monitorCts;
-        private Task? _monitorTask;
         private IntPtr _originalSd = IntPtr.Zero;
         private int _originalSdLength = 0;
 
@@ -333,7 +329,6 @@ namespace Nexus.Services
                 if (daclSuccess || criticalSuccess)
                 {
                     _isProtected = true;
-                    StartMonitor();
                     
                     string mode = "";
                     if (criticalSuccess) mode += "关键进程";
@@ -500,36 +495,6 @@ namespace Nexus.Services
             }
         }
 
-        private void StartMonitor()
-        {
-            _monitorCts = new CancellationTokenSource();
-            _monitorTask = MonitorProcessAsync(_monitorCts.Token);
-        }
-
-        private async Task MonitorProcessAsync(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(5000, cancellationToken);
-                    var currentProcess = Process.GetCurrentProcess();
-                    if (currentProcess.Responding)
-                    {
-                        Debug.WriteLine("[ProcessProtection] 进程运行正常");
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[ProcessProtection] 监控异常: {ex.Message}");
-                }
-            }
-        }
-
         public void DisableProtection()
         {
             if (!_isProtected) return;
@@ -547,10 +512,6 @@ namespace Nexus.Services
                     SetKernelObjectSecurity(processHandle, DACL_SECURITY_INFORMATION, _originalSd);
                     Debug.WriteLine("[ProcessProtection] 已恢复原始DACL");
                 }
-
-                _monitorCts?.Cancel();
-                _monitorCts?.Dispose();
-                _monitorCts = null;
 
                 _isProtected = false;
                 ProtectionEvent?.Invoke("进程保护已禁用");
