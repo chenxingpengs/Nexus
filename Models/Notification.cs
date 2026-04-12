@@ -14,14 +14,17 @@ namespace Nexus.Models
         [JsonPropertyName("system")]
         System,
         
-        [JsonPropertyName("schedule")]
-        Schedule,
-        
-        [JsonPropertyName("attendance")]
-        Attendance,
-        
         [JsonPropertyName("emergency")]
-        Emergency
+        Emergency,
+        
+        [JsonPropertyName("fire_alarm")]
+        FireAlarm,
+        
+        [JsonPropertyName("air_raid_alert")]
+        AirRaidAlert,
+        
+        [JsonPropertyName("earthquake_warning")]
+        EarthquakeWarning
     }
 
     public enum NotificationPriority
@@ -103,9 +106,10 @@ namespace Nexus.Models
             "banner" => NotificationType.Banner,
             "alert" => NotificationType.Alert,
             "system" => NotificationType.System,
-            "schedule" => NotificationType.Schedule,
-            "attendance" => NotificationType.Attendance,
             "emergency" => NotificationType.Emergency,
+            "fire_alarm" => NotificationType.FireAlarm,
+            "air_raid_alert" => NotificationType.AirRaidAlert,
+            "earthquake_warning" => NotificationType.EarthquakeWarning,
             _ => NotificationType.Banner
         };
         
@@ -126,6 +130,15 @@ namespace Nexus.Models
             "error" => "#F56C6C",
             "success" => "#67C23A",
             _ => "#409EFF"
+        };
+        
+        public string FlashColor => Type?.ToLower() switch
+        {
+            "fire_alarm" => "#FF0000",
+            "air_raid_alert" => "#FF8C00",
+            "earthquake_warning" => "#FFD700",
+            "emergency" => "#F56C6C",
+            _ => "#F56C6C"
         };
     }
 }

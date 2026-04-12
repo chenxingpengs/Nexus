@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        x:Class="Nexus.Views.DisasterWarningWindow"
+        WindowState="Maximized"
+        SystemDecorations="None"
+        Background="Transparent"
+        Topmost="True">
+
+  <Grid x:Name="MainGrid">
+    <Border x:Name="FlashBorder" Background="#FF0000" Opacity="0.95" />
+
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="40">
+      <TextBlock x:Name="WarningTypeText" FontSize="72" FontWeight="Bold"
+                 Foreground="White" HorizontalAlignment="Center" />
+
+      <TextBlock x:Name="TitleText" FontSize="48" FontWeight="Bold"
+                 Foreground="White" HorizontalAlignment="Center" />
+
+      <TextBlock x:Name="ContentText" FontSize="28" TextWrapping="Wrap"
+                 Foreground="White" HorizontalAlignment="Center"
+                 MaxWidth="900" />
+
+      <TextBlock x:Name="InstructionText" FontSize="24" TextWrapping="Wrap"
+                 Foreground="White" HorizontalAlignment="Center"
+                 MaxWidth="900" FontStyle="Italic" />
+
+      <Button x:Name="ConfirmButton" Content="确认" FontSize="24"
+              HorizontalAlignment="Center" Padding="50,20"
+              Background="White" Foreground="#FF0000"
+              FontWeight="Bold" Click="ConfirmButton_Click" />
+    </StackPanel>
+  </Grid>
+</Window>

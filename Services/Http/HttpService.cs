@@ -85,6 +85,13 @@ public class HttpService : IDisposable
         {
             using var request = CreateRequest(HttpMethod.Get, url, null, options);
             
+            if (url.Contains("github.com", StringComparison.OrdinalIgnoreCase) || 
+                url.Contains("api.github.com", StringComparison.OrdinalIgnoreCase))
+            {
+                request.Headers.UserAgent.ParseAdd("Nexus/1.0.0");
+                request.Headers.Accept.ParseAdd("application/vnd.github.v3+json");
+            }
+            
             try
             {
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));

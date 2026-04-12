@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using Nexus.Models;
 using Nexus.Views;
@@ -14,7 +15,8 @@ namespace Nexus.Services
         private Models.Notification? _currentNotification;
         private bool _isDisplaying;
         private readonly SocketIOService _socketIOService;
-        private NotificationWindow? _currentWindow;
+        private Window? _currentWindow;
+        private readonly SoundService _soundService;
         private readonly object _lock = new();
 
         public event EventHandler<Models.Notification>? NotificationReceived;
@@ -28,6 +30,7 @@ namespace Nexus.Services
         public NotificationService(SocketIOService socketIOService)
         {
             _socketIOService = socketIOService;
+            _soundService = new SoundService();
         }
 
         public void EnqueueNotification(Models.Notification notification)
@@ -100,11 +103,44 @@ namespace Nexus.Services
                 {
                     _currentWindow?.Close();
                     
-                    _currentWindow = new NotificationWindow();
-                    _currentWindow.NotificationClosed += OnWindowClosed;
-                    _currentWindow.ShowNotification(notification);
+                    var notificationType = notification.NotificationType;
                     
-                    Debug.WriteLine($"[NotificationService] 通知窗口已显示: {notification.Title}");
+                    switch (notificationType)
+                    {
+                        case Models.NotificationType.Alert:
+                            ShowAlertWindow(notification);
+                            break;
+                            
+                        case Models.NotificationType.Emergency:
+                            ShowEmergencyWindow(notification);
+                            break;
+                            
+                        case Models.NotificationType.FireAlarm:
+                            ShowDisasterWarningWindow(notification);
+                            PlayFireAlarmSound();
+                            break;
+                            
+                        case Models.NotificationType.AirRaidAlert:
+                            ShowDisasterWarningWindow(notification);
+                            PlayAirRaidAlertSound();
+                            break;
+                            
+                        case Models.NotificationType.EarthquakeWarning:
+                            ShowDisasterWarningWindow(notification);
+                            PlayEarthquakeWarningSound();
+                            break;
+                            
+                        case Models.NotificationType.System:
+                            ShowSystemNotification(notification);
+                            break;
+                            
+                        case Models.NotificationType.Banner:
+                        default:
+                            ShowBannerWindow(notification);
+                            break;
+                    }
+                    
+                    Debug.WriteLine($"[NotificationService] 通知窗口已显示: {notification.Title}, 类型: {notificationType}");
                     
                     var speakConfig = notification.Display?.Speak;
                     if (speakConfig == null || speakConfig.SpeakEnabled)
@@ -123,6 +159,92 @@ namespace Nexus.Services
                 }
             });
         }
+        
+        private void PlayFireAlarmSound()
+        {
+            _soundService.PlaySound("fire_alarm.mp3", loop: true, volume: 1.0f);
+        }
+        
+        private void PlayAirRaidAlertSound()
+        {
+            _soundService.PlaySound("air_raid_alert.mp3", loop: true, volume: 1.0f);
+        }
+        
+        private void PlayEarthquakeWarningSound()
+        {
+            _soundService.PlaySound("earthquake_warning.mp3", loop: true, volume: 1.0f);
+        }
+        
+        private void ShowBannerWindow(Models.Notification notification)
+        {
+            var window = new NotificationWindow();
+            window.NotificationClosed += OnWindowClosed;
+            window.ShowNotification(notification);
+            _currentWindow = window;
+        }
+        
+        private void ShowAlertWindow(Models.Notification notification)
+        {
+            var window = new Window
+            {
+                Title = notification.Title,
+                Width = 450,
+                Height = 250,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                CanResize = false
+            };
+            
+            var alertControl = new AlertWindow();
+            alertControl.AlertClosed += (s, id) =>
+            {
+                window.Close();
+                OnWindowClosed(s, id);
+            };
+            alertControl.ShowAlert(notification);
+            
+            window.Content = alertControl;
+            window.Show();
+            _currentWindow = window;
+        }
+        
+        private void ShowEmergencyWindow(Models.Notification notification)
+        {
+            var window = new EmergencyWindow();
+            window.EmergencyClosed += (s, id) =>
+            {
+                OnWindowClosed(s, id);
+            };
+            window.ShowEmergency(notification);
+            window.Show();
+            _currentWindow = window;
+        }
+        
+        private void ShowDisasterWarningWindow(Models.Notification notification)
+        {
+            var window = new DisasterWarningWindow();
+            window.WarningClosed += (s, id) =>
+            {
+                OnWindowClosed(s, id);
+            };
+            window.ShowWarning(notification);
+            window.Show();
+            _currentWindow = window;
+        }
+        
+        private void ShowSystemNotification(Models.Notification notification)
+        {
+            var toastService = new ToastService();
+            toastService.ShowToast(notification.Title, notification.Content);
+            
+            var duration = notification.Display?.Duration ?? 5;
+            if (duration > 0)
+            {
+                Task.Delay(TimeSpan.FromSeconds(duration)).ContinueWith(_ =>
+                {
+                    Dispatcher.UIThread.Post(() => CloseCurrent());
+                });
+            }
+        }
 
         private void OnWindowClosed(object? sender, string notificationId)
         {
@@ -138,6 +260,7 @@ namespace Nexus.Services
                 if (_currentNotification != null)
                 {
                     Debug.WriteLine($"[NotificationService] 关闭通知: {_currentNotification.Title}");
+                    _soundService.StopPlayback();
                     NotificationClosed?.Invoke();
                     _currentNotification = null;
                 }
@@ -205,6 +328,7 @@ namespace Nexus.Services
         public void Dispose()
         {
             ClearAll();
+            _soundService.Dispose();
         }
     }
 }

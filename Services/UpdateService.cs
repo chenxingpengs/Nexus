@@ -2,7 +2,10 @@ using Nexus.Models;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -33,6 +36,30 @@ public class UpdateService : HttpService
         );
         _updateConfigFile = Path.Combine(configDir, "update.json");
         _updateConfig = LoadUpdateConfig();
+    }
+
+    private string GetMirrorUrl(string originalUrl)
+    {
+        if (!_updateConfig.UseMirror || string.IsNullOrEmpty(_updateConfig.MirrorUrl))
+        {
+            return originalUrl;
+        }
+
+        var mirrorBase = _updateConfig.MirrorUrl.TrimEnd('/');
+        
+        if (originalUrl.StartsWith("https://api.github.com/"))
+        {
+            return $"{mirrorBase}/{originalUrl}";
+        }
+        
+        if (originalUrl.StartsWith("https://github.com/") || 
+            originalUrl.StartsWith("https://raw.githubusercontent.com/") ||
+            originalUrl.StartsWith("https://objects.githubusercontent.com/"))
+        {
+            return $"{mirrorBase}/{originalUrl}";
+        }
+        
+        return originalUrl;
     }
 
     private UpdateConfig LoadUpdateConfig()
@@ -93,12 +120,39 @@ public class UpdateService : HttpService
         try
         {
             var url = $"https://api.github.com/repos/{_updateConfig.GitHubOwner}/{_updateConfig.GitHubRepo}/releases/latest";
-            var content = await GetRawAsync(url, new RequestOptions 
-            { 
-                RequireAuth = false, 
-                ShowErrorToast = false,
-                OperationName = "检查更新"
-            });
+            
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.UserAgent.ParseAdd($"Nexus/{CurrentVersion}");
+            request.Headers.Accept.ParseAdd("application/vnd.github.v3+json");
+            
+            using var response = await HttpClient.SendAsync(request);
+            
+            if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                if (response.Headers.TryGetValues("X-RateLimit-Reset", out var resetValues))
+                {
+                    var resetTimestamp = long.Parse(resetValues.First());
+                    var resetTime = DateTimeOffset.FromUnixTimeSeconds(resetTimestamp).LocalDateTime;
+                    var waitTime = resetTime - DateTime.Now;
+                    
+                    if (waitTime.TotalMinutes > 0)
+                    {
+                        StatusChanged?.Invoke(UpdateStatus.Error, $"GitHub API 速率限制，请 {waitTime.Minutes} 分钟后重试");
+                        return null;
+                    }
+                }
+                
+                StatusChanged?.Invoke(UpdateStatus.Error, "GitHub API 速率限制，请稍后重试");
+                return null;
+            }
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusChanged?.Invoke(UpdateStatus.Error, $"检查更新失败: HTTP {(int)response.StatusCode}");
+                return null;
+            }
+            
+            var content = await response.Content.ReadAsStringAsync();
 
             if (string.IsNullOrEmpty(content))
             {
@@ -106,7 +160,6 @@ public class UpdateService : HttpService
                 return null;
             }
 
-            // 检查返回内容是否为有效 JSON
             var trimmedContent = content.TrimStart();
             if (!trimmedContent.StartsWith("{") && !trimmedContent.StartsWith("["))
             {
@@ -166,7 +219,8 @@ public class UpdateService : HttpService
         {
             LatestVersion = release.TagName.TrimStart('v'),
             ReleaseNotes = release.Body,
-            ReleaseDate = release.PublishedAt
+            ReleaseDate = release.PublishedAt,
+            IsPrerelease = release.Prerelease
         };
 
         foreach (var asset in release.Assets)
@@ -198,7 +252,8 @@ public class UpdateService : HttpService
 
         try
         {
-            using var response = await HttpClient.GetAsync(updateInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            var downloadUrl = GetMirrorUrl(updateInfo.DownloadUrl);
+            using var response = await HttpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var totalBytes = updateInfo.FileSize > 0 ? updateInfo.FileSize : response.Content.Headers.ContentLength ?? 0;
@@ -329,10 +384,23 @@ public class UpdateService : HttpService
         SaveUpdateConfig();
     }
 
+    public void SetMirrorConfig(bool useMirror, string mirrorUrl)
+    {
+        _updateConfig.UseMirror = useMirror;
+        _updateConfig.MirrorUrl = mirrorUrl;
+        SaveUpdateConfig();
+    }
+
     private int CompareVersions(string version1, string version2)
     {
-        var parts1 = version1.Split('.');
-        var parts2 = version2.Split('.');
+        version1 = version1.TrimStart('v');
+        version2 = version2.TrimStart('v');
+
+        var mainPart1 = version1.Split('-', 2)[0];
+        var mainPart2 = version2.Split('-', 2)[0];
+
+        var parts1 = mainPart1.Split('.');
+        var parts2 = mainPart2.Split('.');
 
         var maxLength = Math.Max(parts1.Length, parts2.Length);
 
@@ -347,7 +415,63 @@ public class UpdateService : HttpService
             }
         }
 
+        var hasPreRelease1 = version1.Contains('-');
+        var hasPreRelease2 = version2.Contains('-');
+
+        if (!hasPreRelease1 && hasPreRelease2)
+        {
+            return 1;
+        }
+        if (hasPreRelease1 && !hasPreRelease2)
+        {
+            return -1;
+        }
+        if (hasPreRelease1 && hasPreRelease2)
+        {
+            var preRelease1 = version1.Split('-', 2)[1];
+            var preRelease2 = version2.Split('-', 2)[1];
+
+            return ComparePreRelease(preRelease1, preRelease2);
+        }
+
         return 0;
+    }
+
+    private int ComparePreRelease(string pre1, string pre2)
+    {
+        var precedence = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "alpha", 0 },
+            { "beta", 1 },
+            { "rc", 2 },
+            { "preview", 0 }
+        };
+
+        static (string type, string num) ParsePreRelease(string pre)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(pre, @"^([a-zA-Z]+)\.?(\d*)$");
+            if (match.Success)
+            {
+                return (match.Groups[1].Value.ToLower(), match.Groups[2].Value);
+            }
+            return (pre.ToLower(), "");
+        }
+
+        var (type1, num1) = ParsePreRelease(pre1);
+        var (type2, num2) = ParsePreRelease(pre2);
+
+        var priority1 = precedence.TryGetValue(type1, out var p1) ? p1 : int.MaxValue;
+        var priority2 = precedence.TryGetValue(type2, out var p2) ? p2 : int.MaxValue;
+
+        if (priority1 != priority2)
+        {
+            return priority1.CompareTo(priority2);
+        }
+
+        var n1 = int.TryParse(num1, out var v1) ? v1 : 0;
+        var n2 = int.TryParse(num2, out var v2) ? v2 : 0;
+
+        return n1.CompareTo(n2);
     }
 
     public static string FormatFileSize(long bytes)
@@ -364,32 +488,4 @@ public class UpdateService : HttpService
     }
 }
 
-public class GitHubRelease
-{
-    [JsonPropertyName("tag_name")]
-    public string TagName { get; set; } = string.Empty;
 
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("body")]
-    public string Body { get; set; } = string.Empty;
-
-    [JsonPropertyName("published_at")]
-    public DateTime PublishedAt { get; set; }
-
-    [JsonPropertyName("assets")]
-    public GitHubAsset[] Assets { get; set; } = Array.Empty<GitHubAsset>();
-}
-
-public class GitHubAsset
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("browser_download_url")]
-    public string BrowserDownloadUrl { get; set; } = string.Empty;
-
-    [JsonPropertyName("size")]
-    public long Size { get; set; }
-}

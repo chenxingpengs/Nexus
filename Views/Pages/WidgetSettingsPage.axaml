@@ -48,159 +48,133 @@
             
             <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="天气位置设置" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
-                    
-                    <Grid ColumnDefinitions="Auto,*" Margin="0,8">
-                        <TextBlock Text="自动定位" 
-                                   FontSize="14" 
-                                   Foreground="#616161" 
-                                   VerticalAlignment="Center"/>
-                        <ToggleSwitch Grid.Column="1" 
-                                     IsChecked="{Binding IsAutoLocationMode}"
-                                     HorizontalAlignment="Right"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="卡片管理" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="AddCardButton"
+                                   Click="OnAddCardClick"
+                                   CornerRadius="6"
+                                   IsEnabled="{Binding HasAvailableCards}"
+                                   ToolTip.Tip="添加组件">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Add}" FontSize="14"/>
+                                    <TextBlock Text="添加" FontSize="13"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding RemoveSelectedCardCommand}"
+                                   CornerRadius="6"
+                                   IsEnabled="{Binding HasSelectedCard}"
+                                   ToolTip.Tip="移除选中组件">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Delete}" FontSize="14" Foreground="#E81123"/>
+                                    <TextBlock Text="移除" Foreground="#E81123" FontSize="13"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </Grid>
                     
-                    <Border Background="#E3F2FD" CornerRadius="8" Padding="12" 
-                           IsVisible="{Binding IsAutoLocationMode}">
+                    <Border Background="#E3F2FD" CornerRadius="8" Padding="12">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Map}" FontSize="16" Foreground="#1976D2"/>
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Help}" FontSize="16" Foreground="#1976D2"/>
                             <TextBlock FontSize="13" Foreground="#1976D2" VerticalAlignment="Center">
-                                <Run Text="当前定位: "/>
-                                <Run Text="{Binding AutoLocationCity}" FontWeight="Medium"/>
+                                点击卡片查看配置，拖拽排序调整显示顺序
                             </TextBlock>
                         </StackPanel>
                     </Border>
                     
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsManualMode}">
-                        <TextBox Text="{Binding CitySearchText}"
-                                Watermark="搜索城市..."
-                                IsEnabled="{Binding !IsSearching}"
-                                KeyDown="OnSearchTextBoxKeyDown"/>
-                        <Button Grid.Column="1"
-                               Command="{Binding SearchCityCommand}"
-                               IsEnabled="{Binding !IsSearching}"
-                               Margin="8,0,0,0"
-                               CornerRadius="6">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <ui:SymbolIcon Symbol="Find" FontSize="14"/>
-                                <TextBlock Text="搜索" FontSize="13"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    
-                    <Border Background="#F5F5F5" CornerRadius="8" Padding="12" 
-                           IsVisible="{Binding HasSearchResults}">
-                        <ListBox ItemsSource="{Binding SearchResults}"
-                                SelectedItem="{Binding SelectedCity}"
-                                MaxHeight="200">
-                            <ListBox.ItemTemplate>
+                    <Border Background="#F5F5F5" CornerRadius="12" Padding="8" MinHeight="60">
+                        <ItemsControl ItemsSource="{Binding EnabledCards}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Name}" 
-                                                   FontSize="14" 
-                                                   FontWeight="Medium"/>
-                                        <TextBlock FontSize="12" Foreground="#757575">
-                                            <Run Text="{Binding Province}"/>
-                                            <Run Text=" · "/>
-                                            <Run Text="{Binding CityId}"/>
-                                        </TextBlock>
-                                    </StackPanel>
+                                    <Border Background="#FFFFFF" 
+                                           CornerRadius="8" 
+                                           Padding="12,8"
+                                           Margin="4,4"
+                                           BorderBrush="{Binding BorderColor}"
+                                           BorderThickness="2"
+                                           PointerPressed="OnCardPointerPressed"
+                                           Cursor="Hand">
+                                        <Border.Styles>
+                                            <Style Selector="Border:pointerover">
+                                                <Setter Property="Background" Value="#F0F7FF"/>
+                                            </Style>
+                                        </Border.Styles>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Border Width="32" Height="32"
+                                                   CornerRadius="6"
+                                                   Background="#E3F2FD"
+                                                   VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding CardIcon}"
+                                                          FontSize="10"
+                                                          FontWeight="Medium"
+                                                          Foreground="#1976D2"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding CardName}" 
+                                                      FontSize="13" 
+                                                      FontWeight="Medium"
+                                                      Foreground="#424242"
+                                                      VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
                                 </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Border>
                     
-                    <Grid ColumnDefinitions="Auto,*" Margin="0,8" 
-                         IsVisible="{Binding HasWeatherLocation}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="当前位置" FontSize="12" Foreground="#9E9E9E"/>
-                            <TextBlock Text="{Binding CurrentCityName}" 
-                                       FontSize="16" 
-                                       FontWeight="Medium"
-                                       Foreground="#1976D2"/>
-                        </StackPanel>
-                        <Button Grid.Column="1" 
-                               Command="{Binding ClearLocationCommand}"
-                               HorizontalAlignment="Right"
-                               Background="#FFEBEE"
-                               CornerRadius="6"
-                               IsVisible="{Binding IsManualMode}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="清除位置" Foreground="#E81123" FontSize="13"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    
-                    <TextBlock Text="自动定位模式会根据您的 IP 地址自动获取天气信息" 
+                    <TextBlock Text="已启用组件将显示在桌面小组件中" 
                                FontSize="12" 
                                Foreground="#9E9E9E"
-                               TextWrapping="Wrap"
-                               IsVisible="{Binding IsAutoLocationMode}"/>
+                               IsVisible="{Binding HasEnabledCards}"/>
                     
-                    <TextBlock Text="手动模式下，请搜索并选择城市来获取天气信息" 
-                               FontSize="12" 
+                    <TextBlock Text="暂无已启用的组件，点击上方添加按钮添加" 
+                               FontSize="13" 
                                Foreground="#9E9E9E"
-                               TextWrapping="Wrap"
-                               IsVisible="{Binding IsManualMode}"/>
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding !HasEnabledCards}"/>
+                    
                 </StackPanel>
             </Border>
             
-            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000">
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000"
+                   IsVisible="{Binding HasSelectedCard}">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="卡片管理" FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding CurrentSettingsTitle}" 
+                                   FontSize="16" FontWeight="SemiBold" Foreground="#424242"/>
+                        <Border Grid.Column="1" 
+                               CornerRadius="4" 
+                               Padding="8,4" 
+                               Background="#E8F5E9"
+                               VerticalAlignment="Center">
+                            <TextBlock Text="已启用" FontSize="12" Foreground="#2E7D32" FontWeight="Medium"/>
+                        </Border>
+                    </Grid>
                     
-                    <TextBlock Text="使用上下按钮调整卡片显示顺序" 
+                    <ContentControl Content="{Binding CurrentSettingsPanel}"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Background="#FFFFFF" CornerRadius="12" Padding="20" BoxShadow="0 2 8 0 #1A000000"
+                   IsVisible="{Binding !HasSelectedCard}">
+                <StackPanel Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Edit}" FontSize="40" Foreground="#BDBDBD" HorizontalAlignment="Center"/>
+                    <TextBlock Text="选择上方卡片查看配置" 
+                               FontSize="14" 
+                               Foreground="#9E9E9E" 
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="点击已启用的卡片，即可查看和修改该卡片的专属设置" 
                                FontSize="12" 
-                               Foreground="#9E9E9E"/>
-                    
-                    <ItemsControl ItemsSource="{Binding CardConfigs}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="#F5F5F5" 
-                                       CornerRadius="8" 
-                                       Padding="12,10"
-                                       Margin="0,0,0,8"
-                                       BorderBrush="#E0E0E0"
-                                       BorderThickness="1">
-                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
-                                        <TextBlock Text="{Binding CardIcon}"
-                                                   FontSize="18"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding CardName}"
-                                                   FontSize="14"
-                                                   VerticalAlignment="Center"
-                                                   Grid.Column="1"/>
-                                        <StackPanel Grid.Column="3" 
-                                                   Orientation="Horizontal" 
-                                                   Spacing="4"
-                                                   VerticalAlignment="Center">
-                                            <Button Width="32" Height="32"
-                                                   Padding="0"
-                                                   CornerRadius="6"
-                                                   Background="#E3F2FD"
-                                                   Command="{Binding $parent[ItemsControl].((vm:WidgetSettingsViewModel)DataContext).MoveCardUpCommand}"
-                                                   CommandParameter="{Binding}">
-                                                <TextBlock Text="▲" FontSize="12" Foreground="#1976D2"/>
-                                            </Button>
-                                            <Button Width="32" Height="32"
-                                                   Padding="0"
-                                                   CornerRadius="6"
-                                                   Background="#E3F2FD"
-                                                   Command="{Binding $parent[ItemsControl].((vm:WidgetSettingsViewModel)DataContext).MoveCardDownCommand}"
-                                                   CommandParameter="{Binding}">
-                                                <TextBlock Text="▼" FontSize="12" Foreground="#1976D2"/>
-                                            </Button>
-                                        </StackPanel>
-                                        <ToggleSwitch Grid.Column="4"
-                                                     IsChecked="{Binding IsVisible}"
-                                                     HorizontalAlignment="Right"
-                                                     Margin="8,0,0,0"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                               Foreground="#BDBDBD" 
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="300"/>
                 </StackPanel>
             </Border>
             

@@ -21,6 +21,7 @@ namespace Nexus.ViewModels
         private readonly AuthService _authService;
         private readonly UpdateService _updateService;
         private readonly ScheduleService _scheduleService;
+        private readonly ToastService _toastService;
         private SocketIOService? _socketIOService;
         private DispatcherTimer? _updateCheckTimer;
         private readonly PowerControlService _powerControlService;
@@ -108,7 +109,7 @@ namespace Nexus.ViewModels
 
         public event Action? RequestLogout;
 
-        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService, WidgetService widgetService, ScheduleService scheduleService)
+        public MainViewModel(ConfigService configService, AuthService authService, UpdateService updateService, PowerControlService powerControlService, WolService wolService, WidgetService widgetService, ScheduleService scheduleService, ToastService toastService)
         {
             _configService = configService;
             _authService = authService;
@@ -117,6 +118,7 @@ namespace Nexus.ViewModels
             _wolService = wolService;
             _widgetService = widgetService;
             _scheduleService = scheduleService;
+            _toastService = toastService;
 
             _powerControlService.PowerControlExecuted += OnPowerControlExecuted;
 
@@ -376,10 +378,19 @@ namespace Nexus.ViewModels
             {
                 if (_updateService.UpdateConfig.AutoDownloadAndInstall)
                 {
+                    _toastService.ShowInfo($"发现新版本 {updateInfo.LatestVersion}，正在后台下载...");
+                    
                     var filePath = await _updateService.DownloadUpdateAsync(updateInfo);
                     if (!string.IsNullOrEmpty(filePath))
                     {
+                        _toastService.ShowSuccess($"新版本 {updateInfo.LatestVersion} 下载完成，即将自动安装...", "更新就绪");
+                        
+                        await Task.Delay(2000);
                         _updateService.InstallUpdate(filePath);
+                    }
+                    else
+                    {
+                        _toastService.ShowError("更新下载失败，请稍后重试");
                     }
                 }
                 else
@@ -387,6 +398,7 @@ namespace Nexus.ViewModels
                     Dispatcher.UIThread.Post(() =>
                     {
                         SelectedNavigationItem = 2;
+                        _toastService.ShowInfo($"发现新版本 {updateInfo.LatestVersion}，请前往更新页面查看");
                     });
                 }
             }

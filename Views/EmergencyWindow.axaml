@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        x:Class="Nexus.Views.EmergencyWindow"
+        WindowState="Maximized"
+        SystemDecorations="None"
+        Background="Transparent"
+        Topmost="True">
+
+  <Grid x:Name="MainGrid">
+    <Border x:Name="FlashBorder" Background="#F56C6C" Opacity="0.95">
+      <Border.Styles>
+        <Style Selector="Border.flash">
+          <Style.Animations>
+            <Animation Duration="0:0:0.5" IterationCount="Infinite">
+              <KeyFrame Cue="0%">
+                <Setter Property="Opacity" Value="0.95" />
+              </KeyFrame>
+              <KeyFrame Cue="50%">
+                <Setter Property="Opacity" Value="0.7" />
+              </KeyFrame>
+              <KeyFrame Cue="100%">
+                <Setter Property="Opacity" Value="0.95" />
+              </KeyFrame>
+            </Animation>
+          </Style.Animations>
+        </Style>
+      </Border.Styles>
+    </Border>
+
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="30">
+      <TextBlock x:Name="TitleText" FontSize="48" FontWeight="Bold"
+                 Foreground="White" HorizontalAlignment="Center" />
+
+      <TextBlock x:Name="ContentText" FontSize="24" TextWrapping="Wrap"
+                 Foreground="White" HorizontalAlignment="Center"
+                 MaxWidth="800" />
+
+      <Button x:Name="ConfirmButton" Content="确认" FontSize="20"
+              HorizontalAlignment="Center" Padding="40,15"
+              Background="White" Foreground="#F56C6C"
+              FontWeight="Bold" Click="ConfirmButton_Click" />
+    </StackPanel>
+  </Grid>
+</Window>

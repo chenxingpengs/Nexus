@@ -79,6 +79,17 @@ public class ToastService : IDisposable
         });
     }
 
+    public void ShowToast(string title, string message, ToastType type = ToastType.Info, int durationMs = 4000)
+    {
+        Show(new ToastItem
+        {
+            Title = title,
+            Message = message,
+            Type = type,
+            DurationMs = durationMs
+        });
+    }
+
     public void Show(ToastItem toast)
     {
         if (_disposed) return;

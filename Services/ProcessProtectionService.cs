@@ -157,7 +157,64 @@ namespace Nexus.Services
 
         #endregion
 
+        #region Critical Process API
+
+        private const int SE_DEBUG_PRIVILEGE = 20;
+        private const int TOKEN_ADJUST_PRIVILEGES = 0x0020;
+        private const int TOKEN_QUERY = 0x0008;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct LUID
+        {
+            public uint LowPart;
+            public int HighPart;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct LUID_AND_ATTRIBUTES
+        {
+            public LUID Luid;
+            public uint Attributes;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct TOKEN_PRIVILEGES
+        {
+            public uint PrivilegeCount;
+            public LUID_AND_ATTRIBUTES Privileges;
+        }
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool OpenProcessToken(
+            IntPtr ProcessHandle,
+            uint DesiredAccess,
+            out IntPtr TokenHandle);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool LookupPrivilegeValue(
+            string? lpSystemName,
+            string lpName,
+            ref LUID lpLuid);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool AdjustTokenPrivileges(
+            IntPtr TokenHandle,
+            bool DisableAllPrivileges,
+            ref TOKEN_PRIVILEGES NewState,
+            uint BufferLength,
+            IntPtr PreviousState,
+            IntPtr ReturnLength);
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        private static extern int RtlSetProcessIsCritical(
+            [MarshalAs(UnmanagedType.Bool)] bool bNewValue,
+            [MarshalAs(UnmanagedType.Bool)] out bool bOldValue,
+            [MarshalAs(UnmanagedType.Bool)] bool bNeedScb);
+
+        #endregion
+
         private bool _isProtected;
+        private bool _isCritical;
         private bool _isDisposed;
         private CancellationTokenSource? _monitorCts;
         private Task? _monitorTask;
@@ -177,12 +234,21 @@ namespace Nexus.Services
 
             try
             {
-                if (EnableDaclProtection())
+                bool daclSuccess = EnableDaclProtection();
+                bool criticalSuccess = EnableCriticalProcess();
+
+                if (daclSuccess || criticalSuccess)
                 {
                     _isProtected = true;
                     StartMonitor();
-                    ProtectionEvent?.Invoke("进程保护已启用（DACL模式）");
-                    Debug.WriteLine("[ProcessProtection] 进程保护已启用（DACL模式）");
+                    
+                    string mode = "";
+                    if (criticalSuccess) mode += "关键进程";
+                    if (daclSuccess && criticalSuccess) mode += " + ";
+                    if (daclSuccess) mode += "DACL保护";
+                    
+                    ProtectionEvent?.Invoke($"进程保护已启用（{mode}）");
+                    Debug.WriteLine($"[ProcessProtection] 进程保护已启用（{mode}）");
                     return true;
                 }
                 return false;
@@ -191,6 +257,85 @@ namespace Nexus.Services
             {
                 Debug.WriteLine($"[ProcessProtection] 启用保护失败: {ex.Message}");
                 ProtectionEvent?.Invoke($"启用保护失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        private bool EnableCriticalProcess()
+        {
+            try
+            {
+                if (!EnableSeDebugPrivilege())
+                {
+                    Debug.WriteLine("[ProcessProtection] 启用 SeDebugPrivilege 失败，需要管理员权限");
+                    return false;
+                }
+
+                bool oldValue;
+                int result = RtlSetProcessIsCritical(true, out oldValue, false);
+
+                if (result >= 0)
+                {
+                    _isCritical = true;
+                    Debug.WriteLine("[ProcessProtection] 关键进程保护已启用 - 强制终止将导致蓝屏");
+                    return true;
+                }
+                else
+                {
+                    Debug.WriteLine($"[ProcessProtection] RtlSetProcessIsCritical 失败: 0x{result:X8}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessProtection] EnableCriticalProcess 异常: {ex.Message}");
+                return false;
+            }
+        }
+
+        private bool EnableSeDebugPrivilege()
+        {
+            try
+            {
+                IntPtr hToken;
+                if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, out hToken))
+                {
+                    Debug.WriteLine($"[ProcessProtection] OpenProcessToken 失败: {Marshal.GetLastWin32Error()}");
+                    return false;
+                }
+
+                LUID luid = new LUID();
+                if (!LookupPrivilegeValue(null, "SeDebugPrivilege", ref luid))
+                {
+                    Debug.WriteLine($"[ProcessProtection] LookupPrivilegeValue 失败: {Marshal.GetLastWin32Error()}");
+                    CloseHandle(hToken);
+                    return false;
+                }
+
+                TOKEN_PRIVILEGES tp = new TOKEN_PRIVILEGES
+                {
+                    PrivilegeCount = 1,
+                    Privileges = new LUID_AND_ATTRIBUTES
+                    {
+                        Luid = luid,
+                        Attributes = 0x00000002
+                    }
+                };
+
+                if (!AdjustTokenPrivileges(hToken, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero))
+                {
+                    Debug.WriteLine($"[ProcessProtection] AdjustTokenPrivileges 失败: {Marshal.GetLastWin32Error()}");
+                    CloseHandle(hToken);
+                    return false;
+                }
+
+                CloseHandle(hToken);
+                Debug.WriteLine("[ProcessProtection] SeDebugPrivilege 已启用");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessProtection] EnableSeDebugPrivilege 异常: {ex.Message}");
                 return false;
             }
         }
@@ -298,6 +443,11 @@ namespace Nexus.Services
 
             try
             {
+                if (_isCritical)
+                {
+                    DisableCriticalProcess();
+                }
+
                 if (_originalSd != IntPtr.Zero)
                 {
                     var processHandle = GetCurrentProcess();
@@ -319,7 +469,37 @@ namespace Nexus.Services
             }
         }
 
+        private void DisableCriticalProcess()
+        {
+            try
+            {
+                if (!EnableSeDebugPrivilege())
+                {
+                    Debug.WriteLine("[ProcessProtection] 禁用关键进程时启用 SeDebugPrivilege 失败");
+                    return;
+                }
+
+                bool oldValue;
+                int result = RtlSetProcessIsCritical(false, out oldValue, false);
+
+                if (result >= 0)
+                {
+                    _isCritical = false;
+                    Debug.WriteLine("[ProcessProtection] 关键进程保护已禁用");
+                }
+                else
+                {
+                    Debug.WriteLine($"[ProcessProtection] 禁用关键进程失败: 0x{result:X8}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessProtection] DisableCriticalProcess 异常: {ex.Message}");
+            }
+        }
+
         public bool IsProtected => _isProtected;
+        public bool IsCritical => _isCritical;
 
         public void Dispose()
         {

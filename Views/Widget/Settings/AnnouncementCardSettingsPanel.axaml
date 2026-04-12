@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             x:Class="Nexus.Views.Widget.Settings.AnnouncementCardSettingsPanel">
+    <StackPanel Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Setting}" FontSize="32" Foreground="#BDBDBD" HorizontalAlignment="Center"/>
+        <TextBlock Text="公告卡片暂无额外配置项" 
+                   FontSize="14" 
+                   Foreground="#9E9E9E" 
+                   HorizontalAlignment="Center"/>
+        <TextBlock Text="公告卡片会自动显示学校发布的公告通知" 
+                   FontSize="12" 
+                   Foreground="#BDBDBD" 
+                   HorizontalAlignment="Center"
+                   TextWrapping="Wrap"
+                   MaxWidth="300"/>
+    </StackPanel>
+</UserControl>
