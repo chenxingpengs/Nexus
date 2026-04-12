@@ -213,6 +213,34 @@ namespace Nexus.Services
 
         #endregion
 
+        #region Shutdown Detection
+
+        private const int WM_QUERYENDSESSION = 0x0011;
+        private const int WM_ENDSESSION = 0x0016;
+        private const int CTRL_SHUTDOWN_EVENT = 6;
+        private const int CTRL_LOGOFF_EVENT = 5;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetProcessShutdownParameters(
+            uint dwLevel,
+            uint dwFlags);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool RegisterApplicationRestart(
+            string? pwzCommandline,
+            int dwFlags);
+
+        private delegate bool ConsoleCtrlHandlerDelegate(int dwCtrlType);
+        
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetConsoleCtrlHandler(
+            ConsoleCtrlHandlerDelegate? handler,
+            bool add);
+
+        private static ConsoleCtrlHandlerDelegate? _consoleCtrlHandler;
+
+        #endregion
+
         private bool _isProtected;
         private bool _isCritical;
         private bool _isDisposed;
@@ -226,6 +254,69 @@ namespace Nexus.Services
         public ProcessProtectionService()
         {
             Debug.WriteLine("[ProcessProtection] 服务已创建");
+            RegisterShutdownHandler();
+        }
+
+        private void RegisterShutdownHandler()
+        {
+            try
+            {
+                SetProcessShutdownParameters(0x3FF, 0);
+                Debug.WriteLine("[ProcessProtection] 已设置关机优先级");
+
+                _consoleCtrlHandler = new ConsoleCtrlHandlerDelegate(ConsoleCtrlHandler);
+                SetConsoleCtrlHandler(_consoleCtrlHandler, true);
+                Debug.WriteLine("[ProcessProtection] 已注册控制台关机处理器");
+
+                Microsoft.Win32.SystemEvents.SessionEnding += OnSessionEnding;
+                Debug.WriteLine("[ProcessProtection] 已注册 SessionEnding 事件");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessProtection] 注册关机处理器失败: {ex.Message}");
+            }
+        }
+
+        private bool ConsoleCtrlHandler(int dwCtrlType)
+        {
+            Debug.WriteLine($"[ProcessProtection] ConsoleCtrlHandler 触发: dwCtrlType={dwCtrlType}");
+
+            if (dwCtrlType == CTRL_SHUTDOWN_EVENT || dwCtrlType == CTRL_LOGOFF_EVENT)
+            {
+                Debug.WriteLine("[ProcessProtection] 检测到关机/注销事件，正在取消关键进程状态...");
+                DisableCriticalProcessFast();
+                return true;
+            }
+
+            return false;
+        }
+
+        private void OnSessionEnding(object sender, Microsoft.Win32.SessionEndingEventArgs e)
+        {
+            Debug.WriteLine($"[ProcessProtection] SessionEnding 事件触发: {e.Reason}");
+            DisableCriticalProcessFast();
+        }
+
+        private void DisableCriticalProcessFast()
+        {
+            if (!_isCritical) return;
+
+            try
+            {
+                EnableSeDebugPrivilege();
+                bool oldValue;
+                int result = RtlSetProcessIsCritical(false, out oldValue, false);
+
+                if (result >= 0)
+                {
+                    _isCritical = false;
+                    Debug.WriteLine("[ProcessProtection] 关键进程状态已快速取消");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProcessProtection] 快速取消关键进程失败: {ex.Message}");
+            }
         }
 
         public bool EnableProtection()
@@ -504,6 +595,17 @@ namespace Nexus.Services
         public void Dispose()
         {
             if (_isDisposed) return;
+
+            try
+            {
+                Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
+                
+                if (_consoleCtrlHandler != null)
+                {
+                    SetConsoleCtrlHandler(_consoleCtrlHandler, false);
+                }
+            }
+            catch { }
 
             DisableProtection();
 
