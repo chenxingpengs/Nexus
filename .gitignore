@@ -44,5 +44,4 @@ bld/
 
 .gitignore
 .trae/
-Output/
-
+.Output/
