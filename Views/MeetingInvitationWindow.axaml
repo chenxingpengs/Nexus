@@ -1,0 +1,69 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels"
+        x:Class="Nexus.Views.MeetingInvitationWindow"
+        x:DataType="vm:MeetingInvitationViewModel"
+        Title="会议邀请"
+        Width="360"
+        Height="280"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="True"
+        Background="#FAFAFA">
+
+    <Window.Styles>
+        <Style Selector="Button.accept-btn">
+            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,12"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style Selector="Button.reject-btn">
+            <Setter Property="Background" Value="#F44336"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,12"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        
+        <!-- 标题 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+            <TextBlock Text="📹" FontSize="28" Margin="0,0,10,0"/>
+            <TextBlock Text="会议邀请" FontSize="22" FontWeight="Bold" Foreground="#1976D2"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 会议信息 -->
+        <StackPanel Grid.Row="1" Spacing="12" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="主持人:" Foreground="#666" FontSize="13"/>
+                <TextBlock Text="{Binding HostName}" FontSize="13"/>
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="邀请时间:" Foreground="#666" FontSize="13"/>
+                <TextBlock Text="{Binding InvitedAt, StringFormat='{}{0:HH:mm}'}" FontSize="13"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 按钮 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20" Margin="0,16,0,0">
+            <Button Content="✓ 接听" 
+                    Command="{Binding AcceptCommand}"
+                    Classes="accept-btn"/>
+            <Button Content="✕ 拒绝" 
+                    Command="{Binding RejectCommand}"
+                    Classes="reject-btn"/>
+        </StackPanel>
+
+    </Grid>
+</Window>

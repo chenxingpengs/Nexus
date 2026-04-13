@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Nexus.ViewModels;
+using System.ComponentModel;
 
 namespace Nexus.Views
 {
@@ -7,6 +9,18 @@ namespace Nexus.Views
         public MainWindow()
         {
             InitializeComponent();
+            Closing += OnClosing;
+        }
+
+        private void OnClosing(object? sender, WindowClosingEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                if (viewModel.IsShowScheduleIncomplete && !viewModel.CanClose)
+                {
+                    e.Cancel = true;
+                }
+            }
         }
     }
 }

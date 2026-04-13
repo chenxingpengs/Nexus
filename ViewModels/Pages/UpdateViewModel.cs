@@ -163,11 +163,6 @@ namespace Nexus.ViewModels.Pages
                 if (status == UpdateStatus.DownloadComplete)
                 {
                     _downloadedFilePath = _updateService.DownloadedFilePath;
-                    
-                    if (!string.IsNullOrEmpty(_downloadedFilePath))
-                    {
-                        _ = InstallUpdateAsync();
-                    }
                 }
 
                 OnPropertyChanged(nameof(IsIdle));

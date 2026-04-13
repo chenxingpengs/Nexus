@@ -55,4 +55,38 @@ namespace Nexus.Converters
             throw new NotImplementedException();
         }
     }
+
+    public class BoolToMeetingStatusColorConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isInMeeting)
+            {
+                return isInMeeting ? new SolidColorBrush(Color.Parse("#4CAF50")) : new SolidColorBrush(Color.Parse("#9E9E9E"));
+            }
+            return new SolidColorBrush(Color.Parse("#9E9E9E"));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class CountToInvertedBoolConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is int count)
+            {
+                return count == 0;
+            }
+            return true;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

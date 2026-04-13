@@ -504,6 +504,20 @@ namespace Nexus.Services
             PluginCurrentDeviceId = deviceId;
         }
 
+        public void On(string eventName, Action<SocketIOClient.SocketIOResponse> handler)
+        {
+            if (_socket == null)
+            {
+                throw new InvalidOperationException("SocketIO 未连接，请先调用 ConnectAsync");
+            }
+            _socket.On(eventName, handler);
+        }
+
+        public void Off(string eventName)
+        {
+            _socket?.Off(eventName);
+        }
+
         public void Dispose()
         {
             Dispose(disposing: true);

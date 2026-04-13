@@ -48,11 +48,20 @@ namespace Nexus.ViewModels.Pages
                 {
                     var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                         @"Software\Microsoft\Windows\CurrentVersion\Run", false);
-                    var value = key?.GetValue("Nexus");
-                    return value != null;
+                    var value = key?.GetValue("Nexus")?.ToString();
+                    if (value == null) return false;
+                    
+                    var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                    if (string.IsNullOrEmpty(exePath)) return false;
+                    
+                    var expectedValue = "\"" + exePath + "\" --autostart";
+                    return value == expectedValue;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 检查自启动状态失败: {ex.Message}");
+            }
             return false;
         }
 
@@ -75,16 +84,22 @@ namespace Nexus.ViewModels.Pages
                         var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
                         if (!string.IsNullOrEmpty(exePath))
                         {
-                            key?.SetValue("Nexus", "\"" + exePath + "\"");
+                            var value = "\"" + exePath + "\" --autostart";
+                            key?.SetValue("Nexus", value);
+                            System.Diagnostics.Debug.WriteLine($"[Nexus] 已启用开机自启: {value}");
                         }
                     }
                     else
                     {
                         key?.DeleteValue("Nexus", false);
+                        System.Diagnostics.Debug.WriteLine("[Nexus] 已禁用开机自启");
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 设置自启动失败: {ex.Message}");
+            }
         }
 
         private void OnUnbind()

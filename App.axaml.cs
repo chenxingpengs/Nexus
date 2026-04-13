@@ -21,12 +21,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace Nexus
 {
     public partial class App : Application
     {
         public static readonly string Version = UpdateService.CurrentVersion;
+        public static bool IsAutoStart { get; private set; }
 
         private ConfigService? _configService;
         private ToastService? _toastService;
@@ -58,6 +60,12 @@ namespace Nexus
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
+                IsAutoStart = desktop.Args?.Contains("--autostart") == true;
+                if (IsAutoStart)
+                {
+                    System.Diagnostics.Debug.WriteLine("[Nexus] 检测到自启动模式");
+                }
+
                 DisableAvaloniaDataAnnotationValidation();
 
                 _configService = new ConfigService();
@@ -100,15 +108,24 @@ namespace Nexus
                     var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                         @"Software\Microsoft\Windows\CurrentVersion\Run", true);
                     
-                    var existingValue = key?.GetValue("Nexus");
-                    if (existingValue == null)
+                    var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                    if (string.IsNullOrEmpty(exePath))
                     {
-                        var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
-                        if (!string.IsNullOrEmpty(exePath))
-                        {
-                            key?.SetValue("Nexus", "\"" + exePath + "\"");
-                            System.Diagnostics.Debug.WriteLine("[Nexus] 已自动启用开机自启");
-                        }
+                        System.Diagnostics.Debug.WriteLine("[Nexus] 无法获取程序路径，跳过自启动设置");
+                        return;
+                    }
+
+                    var expectedValue = "\"" + exePath + "\" --autostart";
+                    var existingValue = key?.GetValue("Nexus")?.ToString();
+                    
+                    if (existingValue != expectedValue)
+                    {
+                        key?.SetValue("Nexus", expectedValue);
+                        System.Diagnostics.Debug.WriteLine($"[Nexus] 已更新开机自启路径: {expectedValue}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("[Nexus] 开机自启路径已正确设置");
                     }
                 }
             }
@@ -240,9 +257,23 @@ namespace Nexus
         {
             System.Diagnostics.Debug.WriteLine("[Nexus] 开始验证设备...");
 
+            if (IsAutoStart)
+            {
+                System.Diagnostics.Debug.WriteLine("[Nexus] 自启动模式：等待网络就绪...");
+                await Task.Delay(3000);
+            }
+
             var startTime = DateTime.Now;
             var (success, errorMsg) = await _authService!.VerifyDeviceAsync();
             System.Diagnostics.Debug.WriteLine($"[Nexus] 验证结果: success={success}, errorMsg={errorMsg}");
+
+            if (!success && IsAutoStart)
+            {
+                System.Diagnostics.Debug.WriteLine("[Nexus] 自启动模式：首次验证失败，等待重试...");
+                await Task.Delay(5000);
+                (success, errorMsg) = await _authService!.VerifyDeviceAsync();
+                System.Diagnostics.Debug.WriteLine($"[Nexus] 重试验证结果: success={success}, errorMsg={errorMsg}");
+            }
 
             var elapsed = (DateTime.Now - startTime).TotalMilliseconds;
             if (elapsed < 1500)

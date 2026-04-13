@@ -2,7 +2,9 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using FluentAvalonia.UI.Controls;
 using Nexus.Models;
+using Nexus.Models.Meeting;
 using Nexus.Services;
+using Nexus.Services.Meeting;
 using Nexus.Services.Widget;
 using Nexus.ViewModels.Pages;
 using Nexus.Views;
@@ -29,6 +31,7 @@ namespace Nexus.ViewModels
         private readonly WolService _wolService;
         private NotificationService? _notificationService;
         private WidgetService? _widgetService;
+        private MeetingPageViewModel? _meetingPageViewModel;
 
         private object? _currentPage;
         public object? CurrentPage
@@ -128,6 +131,7 @@ namespace Nexus.ViewModels
             {
                 new NavigationItem { Label = "系统设置", IconSymbol = Symbol.Setting, Tag = "SystemSettings" },
                 new NavigationItem { Label = "考勤配置", IconSymbol = Symbol.Calendar, Tag = "Schedule" },
+                new NavigationItem { Label = "会议", IconSymbol = Symbol.Video, Tag = "Meeting" },
                 new NavigationItem { Label = "小组件设置", IconSymbol = Symbol.Setting, Tag = "WidgetSettings" },
                 new NavigationItem { Label = "更新", IconSymbol = Symbol.Sync, Tag = "Update" },
                 new NavigationItem { Label = "插件管理", IconSymbol = Symbol.Add, Tag = "PluginManage" },
@@ -162,7 +166,64 @@ namespace Nexus.ViewModels
                 {
                     await _socketIOService.ConnectAsync(config.AccessToken, deviceId, "classroom_terminal");
                 }
+                
+                SetupMeetingEventHandlers();
             }
+        }
+
+        private void SetupMeetingEventHandlers()
+        {
+            if (_socketIOService == null) return;
+            
+            _socketIOService.On("meeting:invited", response =>
+            {
+                try
+                {
+                    var json = response.GetValue().ToString();
+                    var invitation = JsonSerializer.Deserialize<MeetingInvitation>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    if (invitation != null)
+                    {
+                        Dispatcher.UIThread.Post(() => ShowMeetingInvitation(invitation));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] 处理会议邀请失败: {ex.Message}");
+                }
+            });
+        }
+
+        private void ShowMeetingInvitation(MeetingInvitation invitation)
+        {
+            var viewModel = new MeetingInvitationViewModel(invitation);
+            var window = new MeetingInvitationWindow
+            {
+                DataContext = viewModel
+            };
+
+            viewModel.Accepted += async () =>
+            {
+                window.Close();
+                if (_meetingPageViewModel != null)
+                {
+                    await _meetingPageViewModel.AcceptInvitationAsync(invitation);
+                }
+            };
+
+            viewModel.Rejected += async () =>
+            {
+                window.Close();
+                if (_meetingPageViewModel != null)
+                {
+                    await _meetingPageViewModel.RejectInvitationAsync(invitation);
+                }
+            };
+
+            window.Show();
         }
 
         private void OnPageCallReceived(object? sender, JsonElement data)
@@ -308,19 +369,31 @@ namespace Nexus.ViewModels
                     CurrentPage = schedulePage;
                     break;
                 case 2:
-                    CurrentPage = new WidgetSettingsPage(new WidgetSettingsViewModel(_configService, _widgetService!));
+                    var meetingPage = new MeetingPage(new MeetingPageViewModel(_configService, _toastService));
+                    if (_meetingPageViewModel == null)
+                    {
+                        _meetingPageViewModel = meetingPage.DataContext as MeetingPageViewModel;
+                        if (_meetingPageViewModel != null && _socketIOService != null)
+                        {
+                            _meetingPageViewModel.SetSocketIOService(_socketIOService);
+                        }
+                    }
+                    CurrentPage = meetingPage;
                     break;
                 case 3:
-                    CurrentPage = new UpdatePage(_updateService);
+                    CurrentPage = new WidgetSettingsPage(new WidgetSettingsViewModel(_configService, _widgetService!));
                     break;
                 case 4:
+                    CurrentPage = new UpdatePage(_updateService);
+                    break;
+                case 5:
                     var pluginManagePage = new PluginManagePage
                     {
                         DataContext = new PluginManageViewModel(_configService)
                     };
                     CurrentPage = pluginManagePage;
                     break;
-                case 5:
+                case 6:
                     var aboutPage = new AboutPage(_configService, _authService, _passwordService);
                     aboutPage.RequestLogout += () => RequestLogout?.Invoke();
                     CurrentPage = aboutPage;
@@ -468,6 +541,9 @@ namespace Nexus.ViewModels
 
             _widgetService?.Stop();
             _widgetService = null;
+            
+            _meetingPageViewModel?.Dispose();
+            _meetingPageViewModel = null;
         }
     }
 

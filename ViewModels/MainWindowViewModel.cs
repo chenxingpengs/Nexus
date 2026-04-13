@@ -85,6 +85,8 @@ namespace Nexus.ViewModels
                     OnPropertyChanged(nameof(IsShowScheduleIncomplete));
                     OnPropertyChanged(nameof(IsShowSelectBindMode));
                     OnPropertyChanged(nameof(IsShowAuthorizationPending));
+                    
+                    CanClose = value != BindState.ScheduleIncomplete;
                 }
             }
         }
@@ -97,6 +99,13 @@ namespace Nexus.ViewModels
         public bool IsShowScheduleIncomplete => BindState == BindState.ScheduleIncomplete;
         public bool IsShowSelectBindMode => BindState == BindState.SelectBindMode;
         public bool IsShowAuthorizationPending => BindState == BindState.AuthorizationPending;
+
+        private bool _canClose;
+        public bool CanClose
+        {
+            get => _canClose;
+            set => SetProperty(ref _canClose, value);
+        }
 
         private string _verifyUserName = string.Empty;
         public string VerifyUserName
@@ -769,6 +778,7 @@ namespace Nexus.ViewModels
 
         private void OnContinueWithoutSchedule()
         {
+            CanClose = true;
             BindSuccessAndReady?.Invoke();
         }
 

@@ -385,18 +385,23 @@ public class UpdateService : HttpService
 
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = filePath,
-                UseShellExecute = true
+                UseShellExecute = true,
+                Verb = "runas"
             };
 
             if (filePath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
             {
                 processStartInfo.FileName = "msiexec.exe";
-                processStartInfo.Arguments = $"/i \"{filePath}\" /quiet /norestart";
+                processStartInfo.Arguments = $"/i \"{filePath}\" /qn /norestart";
             }
             else if (filePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
+                processStartInfo.FileName = filePath;
                 processStartInfo.Arguments = GetExeSilentArgs(filePath);
+            }
+            else
+            {
+                processStartInfo.FileName = filePath;
             }
 
             var process = Process.Start(processStartInfo);
@@ -406,9 +411,9 @@ public class UpdateService : HttpService
                 return false;
             }
 
-            SetStatus(UpdateStatus.Installing, "正在静默安装更新...");
+            SetStatus(UpdateStatus.Installing, "正在安装更新，请稍候...");
             
-            System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ =>
+            System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ =>
             {
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
@@ -417,6 +422,12 @@ public class UpdateService : HttpService
             });
 
             return true;
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            Debug.WriteLine($"[UpdateService] 用户取消了 UAC 提示");
+            SetStatus(UpdateStatus.Error, "安装已取消");
+            return false;
         }
         catch (Exception ex)
         {
@@ -432,7 +443,7 @@ public class UpdateService : HttpService
         
         if (fileName.StartsWith("nexus-") || fileName.Contains("setup") || fileName.Contains("install"))
         {
-            return "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-";
+            return "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOCLOSEAPPLICATIONS";
         }
         
         return "/S";
