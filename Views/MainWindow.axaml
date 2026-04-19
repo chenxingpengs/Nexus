@@ -1,0 +1,398 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels"
+        x:Class="Nexus.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Nexus - 设备绑定"
+        Width="820" Height="660"
+        MinWidth="700" MinHeight="540"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#FFFFFF" Padding="20" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15">
+                <TextBlock Text="Nexus" FontSize="28" FontWeight="Bold" Foreground="#1976D2"/>
+                <TextBlock Text="设备绑定" FontSize="28" Foreground="#666666" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="24">
+            
+            <Panel IsVisible="{Binding IsShowSelectBindMode}" ZIndex="1">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="40">
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="选择绑定方式" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#333333" HorizontalAlignment="Center"/>
+                        <TextBlock Text="请选择一种方式完成设备绑定" FontSize="16" 
+                                   Foreground="#888888" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="20" HorizontalAlignment="Center">
+                        <Button Command="{Binding SelectQrCodeBindCommand}"
+                                MinWidth="280" Height="72" FontSize="16" CornerRadius="12"
+                                Background="#1976D2" Foreground="#FFFFFF"
+                                HorizontalAlignment="Stretch" MaxWidth="360">
+                            <StackPanel Orientation="Horizontal" Spacing="15">
+                                <TextBlock Text="&#xE8F3;" FontSize="28" FontFamily="Segoe MDL2 Assets" 
+                                           VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="5">
+                                    <TextBlock Text="扫码绑定" FontSize="18" FontWeight="SemiBold"/>
+                                    <TextBlock Text="使用微信小程序扫码绑定" FontSize="12" Opacity="0.8"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                        
+                        <Button Command="{Binding SelectAuthorizationBindCommand}"
+                                MinWidth="280" Height="72" FontSize="16" CornerRadius="12"
+                                Background="#FFFFFF" Foreground="#333333"
+                                BorderBrush="#E0E0E0" BorderThickness="1"
+                                HorizontalAlignment="Stretch" MaxWidth="360">
+                            <StackPanel Orientation="Horizontal" Spacing="15">
+                                <TextBlock Text="&#xE776;" FontSize="28" FontFamily="Segoe MDL2 Assets" 
+                                           VerticalAlignment="Center" Foreground="#1976D2"/>
+                                <StackPanel VerticalAlignment="Center" Spacing="5">
+                                    <TextBlock Text="管理员授权绑定" FontSize="18" FontWeight="SemiBold"/>
+                                    <TextBlock Text="申请管理员远程授权" FontSize="12" Opacity="0.6"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="设备信息" FontSize="12" Foreground="#AAAAAA" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding DeviceId}" FontSize="11" Foreground="#CCCCCC" 
+                                   FontFamily="Consolas" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowAuthorizationPending}" ZIndex="2">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#FFF3E0" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE823;" FontSize="48" Foreground="#FF9800" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="等待管理员授权" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#FF9800" HorizontalAlignment="Center"/>
+                        <TextBlock Text="授权请求已发送，请在管理后台完成授权" FontSize="16" 
+                                   Foreground="#666666" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="8" Padding="20" 
+                            BorderBrush="#E0E0E0" BorderThickness="1" HorizontalAlignment="Center">
+                        <StackPanel Spacing="15">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="请求ID：" FontSize="14" Foreground="#888888"/>
+                                <TextBlock Text="{Binding AuthorizationRequestId}" FontSize="14" 
+                                           Foreground="#333333" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="有效期：" FontSize="14" Foreground="#888888"/>
+                                <TextBlock Text="{Binding AuthorizationCountdown}" FontSize="14" 
+                                           Foreground="#FF9800" FontWeight="Medium"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                    
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="14" 
+                               Foreground="#888888" HorizontalAlignment="Center"/>
+                    
+                    <Button Command="{Binding SelectQrCodeBindCommand}"
+                            Content="切换到扫码绑定"
+                            MinWidth="130" Height="36" FontSize="14" CornerRadius="6"
+                            Background="Transparent" Foreground="#1976D2"
+                            BorderBrush="#1976D2" BorderThickness="1"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+            
+            <Panel IsVisible="{Binding IsShowLoading}" ZIndex="3">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="18" Foreground="#666666" 
+                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowQrCode}" ZIndex="4">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <TextBlock Text="请使用微信小程序扫码绑定" FontSize="24" FontWeight="Bold" 
+                               Foreground="#333333" HorizontalAlignment="Center"/>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="12" Padding="20" 
+                            BoxShadow="0 4 12 0 #20000000">
+                        <Image Width="220" Height="220" Source="{Binding QrCodeImage}"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="请使用小程序首页的扫码功能扫描此二维码" 
+                                   FontSize="14" Foreground="#888888" 
+                                   HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                   FontSize="14" Foreground="#1976D2" 
+                                   HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="12,8" 
+                            BorderBrush="{Binding ConnectionStatusColor}" BorderThickness="1" 
+                            HorizontalAlignment="Center">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <Ellipse Width="12" Height="12" Fill="{Binding ConnectionStatusColor}" 
+                                         Stroke="{Binding ConnectionStatusColor}" StrokeThickness="2"/>
+                                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="14" 
+                                           Foreground="#666666" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                            
+                            <Panel IsVisible="{Binding IsConnectionGood}">
+                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE9D9;" FontSize="12" Foreground="#4CAF50" 
+                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <TextBlock Text="连接质量：" FontSize="11" Foreground="#888888" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding LatencyQualityText}" FontSize="11" 
+                                               Foreground="#4CAF50" VerticalAlignment="Center" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Panel>
+                            
+                            <Panel IsVisible="{Binding IsConnectionPoor}">
+                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE7BA;" FontSize="12" Foreground="#FF9800" 
+                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <TextBlock Text="网络延迟较高" FontSize="11" Foreground="#FF9800" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Panel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="设备信息" FontSize="12" Foreground="#AAAAAA" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding DeviceId}" FontSize="11" Foreground="#CCCCCC" 
+                                   FontFamily="Consolas" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowVerifySuccess}" ZIndex="5">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#E3F2FD" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE73E;" FontSize="48" Foreground="#1976D2" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="扫码验证成功" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#1976D2" HorizontalAlignment="Center"/>
+                        <TextBlock Text="请在小程序中完成绑定" FontSize="18" 
+                                   Foreground="#666666" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Border Background="#FFFFFF" CornerRadius="8" Padding="20" 
+                            BorderBrush="#E0E0E0" BorderThickness="1" HorizontalAlignment="Center">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="扫码用户" FontSize="12" Foreground="#888888"/>
+                            <TextBlock Text="{Binding VerifyUserName}" FontSize="16" 
+                                       Foreground="#333333" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                    <TextBlock Text="等待小程序确认绑定..." FontSize="14" 
+                               Foreground="#888888" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowBindSuccess}" ZIndex="6">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" 
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30" Margin="24">
+                        <Border Background="#E8F5E9" CornerRadius="50" Width="100" Height="100"
+                                HorizontalAlignment="Center">
+                            <TextBlock Text="&#xE73E;" FontSize="48" Foreground="#4CAF50" 
+                                       FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        
+                        <StackPanel Spacing="15" HorizontalAlignment="Center">
+                            <TextBlock Text="绑定成功！" FontSize="28" FontWeight="Bold" 
+                                       Foreground="#4CAF50" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <Border Background="#FFFFFF" CornerRadius="8" Padding="20" 
+                                BorderBrush="#E0E0E0" BorderThickness="1" HorizontalAlignment="Center">
+                            <StackPanel Spacing="15">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="绑定班级：" FontSize="14" Foreground="#888888"/>
+                                    <TextBlock Text="{Binding BindClassName}" FontSize="16" 
+                                               Foreground="#333333" FontWeight="Medium"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="设备ID：" FontSize="14" Foreground="#888888"/>
+                                    <TextBlock Text="{Binding DeviceId}" FontSize="12" 
+                                               Foreground="#666666" FontFamily="Consolas"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                        <Panel IsVisible="{Binding IsShowScheduleIncomplete}">
+                            <Border Background="#FFF3E0" CornerRadius="12" Padding="20" 
+                                    BorderBrush="#FF9800" BorderThickness="1" HorizontalAlignment="Center" MaxWidth="480">
+                                <StackPanel Spacing="15">
+                                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                        <TextBlock Text="&#xE7BA;" FontSize="20" Foreground="#FF9800" 
+                                                   FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                        <TextBlock Text="配置不完整" FontSize="18" FontWeight="SemiBold" 
+                                                   Foreground="#E65100" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    
+                                    <Panel IsVisible="{Binding HasMissingSlots}">
+                                        <Border Background="#FFFFFF" CornerRadius="8" Padding="12" Margin="0,0,0,5">
+                                            <StackPanel Spacing="8">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="&#xE8FD;" FontSize="14" Foreground="#FF9800" 
+                                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="周期排班" FontSize="14" FontWeight="Medium" 
+                                                               Foreground="#333333" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock FontSize="13" Foreground="#666666" TextWrapping="Wrap">
+                                                    <Run Text="有"/>
+                                                    <Run Text="{Binding MissingSlotsCount}" FontWeight="Bold" Foreground="#FF9800"/>
+                                                    <Run Text="个时段未配置排班，共"/>
+                                                    <Run Text="{Binding TotalSlotsCount}" FontWeight="Bold"/>
+                                                    <Run Text="个时段"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </Panel>
+                                    
+                                    <Panel IsVisible="{Binding HasIncompleteQuotas}">
+                                        <Border Background="#FFFFFF" CornerRadius="8" Padding="12" Margin="0,0,0,5">
+                                            <StackPanel Spacing="8">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="&#xE7BE;" FontSize="14" Foreground="#FF9800" 
+                                                               FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="时段人数" FontSize="14" FontWeight="Medium" 
+                                                               Foreground="#333333" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock FontSize="13" Foreground="#666666" TextWrapping="Wrap">
+                                                    <Run Text="有"/>
+                                                    <Run Text="{Binding IncompleteQuotasCount}" FontWeight="Bold" Foreground="#FF9800"/>
+                                                    <Run Text="个时段未配置应到人数"/>
+                                                </TextBlock>
+                                                <Border MaxHeight="120" CornerRadius="4" Background="#FAFAFA" Padding="8,4">
+                                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" 
+                                                                  VerticalScrollBarVisibility="Auto">
+                                                        <ItemsControl ItemsSource="{Binding IncompleteQuotaItems}" Margin="0,4,0,0">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBlock FontSize="12" Foreground="#888888" Margin="0,2,0,0">
+                                                                        <Run Text="• "/>
+                                                                        <Run Text="{Binding TimeSlotName}"/>
+                                                                        <Run Text=" ("/>
+                                                                        <Run Text="{Binding StartTime}"/>
+                                                                        <Run Text="-"/>
+                                                                        <Run Text="{Binding EndTime}"/>
+                                                                        <Run Text=")"/>
+                                                                    </TextBlock>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </ScrollViewer>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </Panel>
+                                    
+                                    <TextBlock Text="建议现在完善配置，否则考勤功能可能无法正常使用"
+                                               FontSize="12" Foreground="#888888" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    
+                                    <StackPanel Spacing="10" Margin="0,10,0,0">
+                                        <Button Command="{Binding OpenScheduleSetupCommand}"
+                                                Width="280" Height="45" FontSize="15" CornerRadius="8"
+                                                Background="#FF9800" Foreground="#FFFFFF"
+                                                HorizontalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="&#xE8FD;" FontSize="16" FontFamily="Segoe MDL2 Assets" 
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="立即配置" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        
+                                        <Button Command="{Binding ContinueWithoutScheduleCommand}"
+                                                Width="280" Height="40" FontSize="14" CornerRadius="8"
+                                                Background="Transparent" Foreground="#888888"
+                                                BorderBrush="#E0E0E0" BorderThickness="1"
+                                                HorizontalAlignment="Center">
+                                            <TextBlock Text="稍后配置（可在主菜单-考勤配置中完善）" FontSize="12"/>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Panel>
+                        
+                        <TextBlock Text="设备已成功绑定，可以开始使用考勤功能" 
+                                   FontSize="14" Foreground="#888888" HorizontalAlignment="Center"
+                                   IsVisible="{Binding !IsShowScheduleIncomplete}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Panel>
+
+            <Panel IsVisible="{Binding IsShowError}" ZIndex="7">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30">
+                    <Border Background="#FFEBEE" CornerRadius="50" Width="100" Height="100"
+                            HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE783;" FontSize="48" Foreground="#F44336" 
+                                   FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <StackPanel Spacing="15" HorizontalAlignment="Center">
+                        <TextBlock Text="绑定失败" FontSize="28" FontWeight="Bold" 
+                                   Foreground="#F44336" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding ErrorMessage}" FontSize="16" 
+                                   Foreground="#666666" HorizontalAlignment="Center" 
+                                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400"/>
+                    </StackPanel>
+                    
+                    <Button Content="重新尝试" Command="{Binding RefreshTokenCommand}"
+                            MinWidth="120" Height="40" FontSize="16" CornerRadius="8"
+                            Background="#1976D2" Foreground="#FFFFFF"
+                            HorizontalAlignment="Center"
+                            IsVisible="{Binding IsShowError}"
+                            IsEnabled="{Binding IsShowError}"/>
+                </StackPanel>
+            </Panel>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#FFFFFF" Padding="15" 
+                BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+                <Button Content="刷新二维码" Command="{Binding RefreshTokenCommand}"
+                        MinWidth="110" Height="36" FontSize="14" CornerRadius="6"
+                        Background="#1976D2" Foreground="#FFFFFF"
+                        IsVisible="{Binding IsShowQrCode}"/>
+
+                <Button Content="重新绑定" Command="{Binding RefreshTokenCommand}"
+                        MinWidth="110" Height="36" FontSize="14" CornerRadius="6"
+                        Background="#1976D2" Foreground="#FFFFFF"
+                        IsVisible="{Binding IsShowBindSuccess}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

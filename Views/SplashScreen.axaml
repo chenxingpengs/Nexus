@@ -1,0 +1,220 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels"
+        x:Class="Nexus.Views.SplashScreen"
+        x:DataType="vm:SplashScreenViewModel"
+        Title="Nexus"
+        Width="580" Height="520"
+        MinWidth="480" MinHeight="400"
+        MaxWidth="800" MaxHeight="700"
+        WindowStartupLocation="CenterScreen"
+        CanResize="True"
+        Background="{DynamicResource SystemChromeLowColor}"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="PreferSystemChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        SystemDecorations="BorderOnly">
+
+    <Window.DataContext>
+        <vm:SplashScreenViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource SystemChromeMediumColor}" Padding="15,10" Height="40">
+            <Grid>
+                <TextBlock Text="Nexus"
+                           FontSize="14"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           VerticalAlignment="Center"
+                           Margin="5,0,0,0"/>
+                
+                <Button Width="46" Height="32"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        CornerRadius="0"
+                        Command="{Binding CloseCommand}"
+                        IsEnabled="{Binding CanClose}"
+                        IsVisible="{Binding ShowCloseButton}">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Background" Value="#E81123"/>
+                        </Style>
+                        <Style Selector="Button:disabled">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Style>
+                    </Button.Styles>
+                    <TextBlock Text="&#xE106;"
+                               FontSize="12"
+                               FontFamily="Segoe MDL2 Assets"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="{DynamicResource SystemChromeMediumColor}" Padding="20,15" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Image Source="/Assets/hqzx.png"
+                       Width="40" Height="40"
+                       Stretch="Uniform"/>
+                <TextBlock Text="珠海市红旗中学"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="2" 
+                     HorizontalScrollBarVisibility="Disabled"
+                     VerticalScrollBarVisibility="Auto"
+                     Padding="20,0">
+            <StackPanel VerticalAlignment="Center" 
+                        HorizontalAlignment="Center" 
+                        Spacing="20"
+                        MaxWidth="500">
+                
+                <TextBlock Text="Nexus"
+                           FontSize="42"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource SystemAccentColor}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           LetterSpacing="2"/>
+                
+                <TextBlock Text="红旗中学智慧校园系统"
+                           FontSize="18"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,5,0,0"/>
+                
+                <Border Background="{DynamicResource SystemErrorTextColor}"
+                        CornerRadius="4"
+                        Padding="16,12"
+                        Margin="0,20,0,0"
+                        IsVisible="{Binding HasError}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="&#xE783;"
+                                   FontSize="24"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding ErrorMessage}"
+                                   FontSize="14"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="450"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFF3E0"
+                        CornerRadius="4"
+                        Padding="16,12"
+                        Margin="0,10,0,0"
+                        IsVisible="{Binding HasIncompleteData}">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <TextBlock Text="&#xE7BA;"
+                                       FontSize="20"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       Foreground="#F57C00"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="数据不完整"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="#E65100"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding IncompleteDataMessage}"
+                                   FontSize="13"
+                                   Foreground="#BF360C"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="450"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="3" 
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,24"
+                    Spacing="12">
+            
+            <Button Command="{Binding StartCommand}"
+                    IsEnabled="{Binding !IsNavigating}"
+                    Width="60" Height="60"
+                    CornerRadius="30"
+                    Background="{DynamicResource SystemAccentColor}"
+                    Foreground="White"
+                    Cursor="Hand"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding ShowStartButton}">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Background" Value="{DynamicResource SystemAccentColorDark1}"/>
+                    </Style>
+                    <Style Selector="Button:pressed">
+                        <Setter Property="Background" Value="{DynamicResource SystemAccentColorDark2}"/>
+                    </Style>
+                </Button.Styles>
+                
+                <Panel>
+                    <TextBlock Text="&#xE76C;"
+                               FontSize="24"
+                               FontFamily="Segoe MDL2 Assets"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding !IsNavigating}"/>
+                    
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="30" Height="30"
+                                 IsVisible="{Binding IsNavigating}"
+                                 Foreground="White"/>
+                </Panel>
+            </Button>
+            
+            <Button Command="{Binding RetryCommand}"
+                    IsEnabled="{Binding !IsNavigating}"
+                    Width="60" Height="60"
+                    CornerRadius="30"
+                    Background="{DynamicResource SystemAccentColor}"
+                    Foreground="White"
+                    Cursor="Hand"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding ShowRetryButton}">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Background" Value="{DynamicResource SystemAccentColorDark1}"/>
+                    </Style>
+                </Button.Styles>
+                <TextBlock Text="&#xE72C;"
+                           FontSize="24"
+                           FontFamily="Segoe MDL2 Assets"
+                           Foreground="White"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Button>
+            
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="14"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="450"/>
+        </StackPanel>
+    </Grid>
+</Window>

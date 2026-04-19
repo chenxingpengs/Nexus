@@ -1,0 +1,186 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Nexus.ViewModels.Pages"
+             xmlns:models="using:Nexus.Plugins.Contracts.Models"
+             xmlns:rmodels="using:Nexus.Models"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Nexus.Views.Pages.PluginManagePage"
+             x:DataType="vm:PluginManageViewModel">
+
+  <Design.DataContext>
+    <vm:PluginManageViewModel />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Background="#F5F5F5" Padding="16,12">
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <TextBlock Text="🧩 插件管理" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+        <Button Content="🔄 全部刷新" Command="{Binding Refresh}" Padding="8,4"/>
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="0">
+
+        <!-- 区域一：本地已加载插件 -->
+        <Border Background="#FFFFFF" CornerRadius="8,8,0,0" Margin="12,12,12,0" Padding="16,14"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Grid.Column="0" Text="🧩 本地插件" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" Margin="16,0,0,0" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="已加载:" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Text="{Binding Plugins.Count}" Foreground="#1976D2" FontWeight="Bold" FontSize="12"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="WS:" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Text="{Binding WsHandlerCount}" Foreground="#388E3C" FontWeight="Bold" FontSize="12"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="视图:" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Text="{Binding ViewCount}" Foreground="#F57C00" FontWeight="Bold" FontSize="12"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="菜单:" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Text="{Binding MenuItemCount}" Foreground="#7B1FA2" FontWeight="Bold" FontSize="12"/>
+              </StackPanel>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding StatusMessage}" Foreground="#666" FontSize="12" VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Plugins}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="models:PluginMetadata">
+              <Border Margin="12,0,12,6" CornerRadius="0,0,8,8" BorderBrush="#E0E0E0" BorderThickness="1,0,1,1"
+                      Background="White" Padding="16,12">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20"
+                          Background="#E3F2FD" VerticalAlignment="Center">
+                    <TextBlock Text="🧩" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="{Binding Id}" Foreground="#999" FontSize="11" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="12" Margin="0,2,0,0"
+                               MaxWidth="400" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Version}" Foreground="#888" FontSize="11"/>
+                      <TextBlock Text="{Binding Author}" Foreground="#888" FontSize="11"/>
+                    </StackPanel>
+                  </StackPanel>
+
+                  <Border Grid.Column="2" CornerRadius="10" Padding="8,4" Background="#F0F0F0"
+                          VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock Text="{Binding StateDisplayText}"
+                               FontSize="11" FontWeight="SemiBold"/>
+                  </Border>
+
+                  <Button Grid.Column="3" Content="卸载" Padding="10,6" CornerRadius="6"
+                          Background="#FFEBEE" Foreground="#F44336" BorderThickness="0"
+                          FontSize="12" VerticalAlignment="Center"
+                          Command="{Binding $parent[ItemsControl].((vm:PluginManageViewModel)DataContext).UninstallPluginAsyncCommand}"
+                          CommandParameter="{Binding}"/>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- 分隔区域 -->
+        <Border Height="24"/>
+
+        <!-- 区域二：远程插件市场 -->
+        <Border Background="#FFFFFF" CornerRadius="8,8,0,0" Margin="12,0,12,0" Padding="16,14"
+                BorderBrush="#1976D2" BorderThickness="2,2,1,1">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+            <TextBlock Grid.Column="0" Text="📦 远程插件市场" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
+                       Foreground="#1976D2"/>
+            <TextBlock Grid.Column="2" Text="{Binding RemoteStatusMessage}" Foreground="#666" FontSize="12"
+                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <Button Grid.Column="3" Content="🔄 刷新远程" Command="{Binding RefreshRemoteCommand}"
+                    Padding="8,4" IsEnabled="{Binding !IsRemoteLoading}"/>
+          </Grid>
+        </Border>
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsRemoteLoading}"
+                     Height="3" Margin="12,0"/>
+
+        <ItemsControl ItemsSource="{Binding RemotePlugins}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="rmodels:RemotePluginInfo">
+              <Border Margin="12,0,12,8" CornerRadius="8" BorderBrush="#E8E8E8" BorderThickness="1"
+                      Background="White" Padding="16,14">
+                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+
+                  <Border Grid.RowSpan="3" Grid.Column="0" Width="44" Height="44" CornerRadius="22"
+                          Background="#E8F5E9" VerticalAlignment="Top" Margin="0,0,12,0">
+                    <TextBlock Text="📦" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Grid.Row="0" Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                      <Border CornerRadius="9" Padding="6,2" Background="#FFF3E0"
+                              IsVisible="{Binding HasUpdate}">
+                        <TextBlock Text="有更新" Foreground="#E65100" FontSize="10" FontWeight="Medium"/>
+                      </Border>
+                      <Border CornerRadius="9" Padding="6,2" Background="#E8F5E9"
+                              IsVisible="{Binding Installed}">
+                        <TextBlock Text="已安装" Foreground="#2E7D32" FontSize="10" FontWeight="Medium"/>
+                      </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Id}" Foreground="#BBB" FontSize="11"/>
+                    <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="12" TextWrapping="Wrap"
+                               MaxWidth="500"/>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Spacing="16" Margin="0,6,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Text="版本:" Foreground="#999" FontSize="11"/>
+                      <TextBlock Text="{Binding Version}" FontWeight="SemiBold" FontSize="11"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4"
+                                IsVisible="{Binding LatestVersion, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                      <TextBlock Text="最新:" Foreground="#999" FontSize="11"/>
+                      <TextBlock Text="{Binding LatestVersion}" FontWeight="SemiBold" FontSize="11"
+                                 Foreground="#FF9800"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Text="{Binding Author}" Foreground="#AAA" FontSize="11"/>
+                    </StackPanel>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                    <Button Content="{Binding InstallButtonText}"
+                            Padding="12,6" CornerRadius="6" FontSize="12"
+                            Background="{Binding InstallButtonColor}"
+                            Foreground="White" BorderThickness="0"
+                            Command="{Binding $parent[ItemsControl].((vm:PluginManageViewModel)DataContext).InstallOrUpdatePluginAsyncCommand}"
+                            CommandParameter="{Binding}"
+                            IsEnabled="{Binding $parent[ItemsControl].((vm:PluginManageViewModel)DataContext).IsNotInstalling}"/>
+
+                    <Button Content="GitHub ↗" Padding="8,6" CornerRadius="6" FontSize="11"
+                            Background="Transparent" Foreground="#1976D2" BorderBrush="#1976D2" BorderThickness="1"
+                            Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:PluginManageViewModel)DataContext).OpenGitHubRepoCommand}"
+                            CommandParameter="{Binding HtmlUrl}"
+                            IsVisible="{Binding HtmlUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <TextBlock Text="⚠ 未提供自动安装来源，请联系管理员"
+                               Foreground="#9E9E9E" FontSize="11" VerticalAlignment="Center"
+                               IsVisible="{Binding HasNoDownloadUrl}"/>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

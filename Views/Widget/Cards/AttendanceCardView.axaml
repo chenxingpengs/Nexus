@@ -1,0 +1,245 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Widget.Cards"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             x:Class="Nexus.Views.Widget.Cards.AttendanceCardView"
+             x:DataType="vm:AttendanceCardViewModel">
+
+    <Border Background="#F5F5F5"
+            CornerRadius="12"
+            Padding="16"
+            BorderBrush="#1A000000"
+            BorderThickness="1">
+        
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+            
+            <!-- 标题栏 -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,12">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="20" Foreground="#1976D2"/>
+                    <TextBlock Text="今日考勤" 
+                               FontSize="16" 
+                               FontWeight="Medium"
+                               Foreground="#424242"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <!-- 班级名称 -->
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ClassName}"
+                           FontSize="12"
+                           Foreground="#757575"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="8,0"/>
+                
+                <!-- 刷新按钮 -->
+                <Button Grid.Column="2"
+                        Command="{Binding RefreshDataCommand}"
+                        IsVisible="{Binding !IsLoading}"
+                        Background="Transparent"
+                        Padding="4">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Refresh}" FontSize="16" Foreground="#757575"/>
+                </Button>
+            </Grid>
+            
+            <!-- 时段选择器 -->
+            <Border Grid.Row="1"
+                    Background="#E3F2FD"
+                    CornerRadius="6"
+                    Padding="8,6"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding HasMultipleTimeSlots}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Text="时段:" 
+                               FontSize="12" 
+                               Foreground="#1976D2"
+                               VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding TimeSlots}"
+                              SelectedItem="{Binding SelectedTimeSlot}"
+                              HorizontalAlignment="Stretch"
+                              Margin="8,0"
+                              Padding="8,4">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontSize="12"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+            </Border>
+            
+            <!-- 状态标签 -->
+            <Border Grid.Row="2"
+                    Background="{Binding StatusColor}"
+                    CornerRadius="4"
+                    Padding="8,4"
+                    HorizontalAlignment="Left"
+                    Margin="0,0,0,12">
+                <TextBlock Text="{Binding StatusDisplay}"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="White"/>
+            </Border>
+            
+            <!-- 非考勤时段提示 -->
+            <Border Grid.Row="3"
+                    Background="#FFFFFF"
+                    CornerRadius="8"
+                    Padding="16,20"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding ShowNonAttendanceMessage}">
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clock}" FontSize="32" Foreground="#9E9E9E"/>
+                    <TextBlock Text="非考勤时段"
+                               FontSize="16"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="当前时间不在考勤时段内"
+                               FontSize="12"
+                               Foreground="#9E9E9E"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- 无排班记录提示 -->
+            <Border Grid.Row="3"
+                    Background="#FFF8E1"
+                    CornerRadius="8"
+                    Padding="16,20"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding ShowNoScheduleMessage}">
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="32" Foreground="#FF9800"/>
+                    <TextBlock Text="无排班记录"
+                               FontSize="16"
+                               FontWeight="Medium"
+                               Foreground="#FF9800"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding Message}"
+                               FontSize="12"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="200"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- 停课提示 -->
+            <Border Grid.Row="3"
+                    Background="#FFEBEE"
+                    CornerRadius="8"
+                    Padding="16,20"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding ShowCancelledMessage}">
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Cancel}" FontSize="32" Foreground="#F44336"/>
+                    <TextBlock Text="今日停课"
+                               FontSize="16"
+                               FontWeight="Medium"
+                               Foreground="#F44336"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding CancelReason}"
+                               FontSize="12"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="200"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- 调课提示 -->
+            <Border Grid.Row="3"
+                    Background="#FFF3E0"
+                    CornerRadius="8"
+                    Padding="16,20"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding ShowReplacedMessage}">
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Switch}" FontSize="32" Foreground="#FF9800"/>
+                    <TextBlock Text="今日调课"
+                               FontSize="16"
+                               FontWeight="Medium"
+                               Foreground="#FF9800"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding Message}"
+                               FontSize="12"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="200"/>
+                </StackPanel>
+            </Border>
+            
+            
+            <!-- 正常考勤数据 - 统计信息放大显示 -->
+            <Border Grid.Row="3" 
+                    Background="#FFFFFF" 
+                    CornerRadius="8" 
+                    Padding="0"
+                    Margin="0,0,0,12"
+                    IsVisible="{Binding ShowAttendanceData}">
+                <StackPanel Spacing="0">
+                    <!-- 补课提示条 -->
+                    <Border Background="#E3F2FD" 
+                            CornerRadius="8,8,0,0"
+                            Padding="12,8"
+                            IsVisible="{Binding ShowMakeupMessage}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="16" Foreground="#2196F3"/>
+                            <TextBlock Text="{Binding Message}"
+                                       FontSize="12"
+                                       Foreground="#2196F3"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- 考勤数据 -->
+                    <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto" Margin="12,12">
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.People}" FontSize="20" Foreground="#1976D2" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalCount}" FontSize="28" FontWeight="Bold" Foreground="#1976D2" HorizontalAlignment="Center"/>
+                            <TextBlock Text="应到" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Accept}" FontSize="20" Foreground="#4CAF50" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding PresentCount}" FontSize="28" FontWeight="Bold" Foreground="#4CAF50" HorizontalAlignment="Center"/>
+                            <TextBlock Text="实到" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clock}" FontSize="20" Foreground="#FF9800" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding LeaveCount}" FontSize="28" FontWeight="Bold" Foreground="#FF9800" HorizontalAlignment="Center"/>
+                            <TextBlock Text="请假" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="3" HorizontalAlignment="Center" Spacing="4">
+                            <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Clear}" FontSize="20" Foreground="#F44336" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding AbsentCount}" FontSize="28" FontWeight="Bold" Foreground="#F44336" HorizontalAlignment="Center"/>
+                            <TextBlock Text="缺勤" FontSize="12" Foreground="#757575" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- 前往考勤页面按钮 -->
+            <Button Grid.Row="4"
+                    Command="{Binding OpenAttendancePageCommand}"
+                    IsVisible="{Binding ShowAttendanceData}"
+                    Background="#1976D2"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="12,10"
+                    CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Open}" FontSize="16" Foreground="White"/>
+                    <TextBlock Text="前往考勤页面" FontSize="14" FontWeight="Medium"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Border>
+    
+</UserControl>

@@ -1,0 +1,61 @@
+using CommunityToolkit.Mvvm.Input;
+using Nexus.Services;
+using System;
+using System.Reflection;
+using System.Windows.Input;
+
+namespace Nexus.ViewModels.Pages
+{
+    public class AboutViewModel : ViewModelBase
+    {
+        private readonly ConfigService _configService;
+        private readonly AuthService _authService;
+        private readonly PasswordService _passwordService;
+
+        public string VersionText { get; }
+        public string DeviceName { get; }
+        public string DeviceId { get; }
+        public bool IsBound { get; }
+
+        public ICommand UnbindCommand { get; }
+
+        public event Action? RequestLogout;
+        public event Action<Action<bool>>? RequestPasswordVerification;
+
+        public AboutViewModel(ConfigService configService, AuthService authService, PasswordService passwordService)
+        {
+            _configService = configService;
+            _authService = authService;
+            _passwordService = passwordService;
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            VersionText = version != null ? $"版本 {version.Major}.{version.Minor}.{version.Build}" : "版本 1.0.0";
+
+            var config = _configService.Config;
+            DeviceName = config.DeviceName ?? "未命名设备";
+            DeviceId = config.DeviceId ?? "";
+            IsBound = config.IsBound;
+
+            UnbindCommand = new RelayCommand(OnUnbind);
+        }
+
+        private void OnUnbind()
+        {
+            RequestPasswordVerification?.Invoke(OnPasswordVerified);
+        }
+
+        private void OnPasswordVerified(bool success)
+        {
+            if (success)
+            {
+                DoUnbind();
+            }
+        }
+
+        public void DoUnbind()
+        {
+            _configService.ClearBindInfo();
+            RequestLogout?.Invoke();
+        }
+    }
+}

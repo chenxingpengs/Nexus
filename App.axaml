@@ -1,0 +1,87 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Nexus.App"
+             xmlns:fluent="using:FluentAvalonia.Styling"
+             xmlns:local="using:Nexus"
+             xmlns:styling="using:FluentAvalonia.Styling"
+             xmlns:converters="using:Nexus.Converters"
+             RequestedThemeVariant="Default">
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+    
+    <Application.Resources>
+        <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter"/>
+        <converters:BoolToStatusColorConverter x:Key="BoolToStatusColorConverter"/>
+        <converters:MissingToBackgroundConverter x:Key="MissingToBackgroundConverter"/>
+        
+        <!-- 全局字体设置 -->
+        <FontFamily x:Key="DefaultFontFamily">Segoe UI Variable</FontFamily>
+        
+        <!-- Win11 标准强调色 -->
+        <Color x:Key="AccentPrimaryColor">#0078D4</Color>
+        <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentPrimaryColor}"/>
+        
+        <!-- 背景色 -->
+        <Color x:Key="SolidBackgroundBase">#F3F3F3</Color>
+        <SolidColorBrush x:Key="SolidBackgroundBaseBrush" Color="{StaticResource SolidBackgroundBase}"/>
+        
+        <!-- 文字颜色 -->
+        <Color x:Key="TextPrimary">#202122</Color>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}"/>
+        <Color x:Key="TextSecondary">#605E5C</Color>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
+        <Color x:Key="TextTertiary">#797775</Color>
+        <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiary}"/>
+        
+        <!-- 状态色 -->
+        <Color x:Key="SuccessColor">#107C10</Color>
+        <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+        
+        <!-- 次级填充 -->
+        <Color x:Key="SubtleFillColorSecondary">#F9F9F9</Color>
+        <SolidColorBrush x:Key="SubtleFillSecondaryBrush" Color="{StaticResource SubtleFillColorSecondary}"/>
+        <Color x:Key="AccentLight3">#B3E2FF</Color>
+        <SolidColorBrush x:Key="AccentLight3Brush" Color="{StaticResource AccentLight3}"/>
+        
+        <!-- 尺寸常量 -->
+        <x:Double x:Key="WindowPreferredWidth">1200</x:Double>
+        <x:Double x:Key="WindowPreferredHeight">750</x:Double>
+        <x:Double x:Key="WindowMinWidth">900</x:Double>
+        <x:Double x:Key="WindowMinHeight">600</x:Double>
+        <x:Double x:Key="NavigationViewOpenPaneWidth">280</x:Double>
+        <x:Double x:Key="NavigationViewCompactPaneWidth">56</x:Double>
+        <x:Double x:Key="NavigationViewTitleBarHeight">48</x:Double>
+        <x:Double x:Key="SpacingXS">4</x:Double>
+        <x:Double x:Key="SpacingSM">8</x:Double>
+        <x:Double x:Key="SpacingMD">16</x:Double>
+        <x:Double x:Key="SpacingLG">24</x:Double>
+        <x:Double x:Key="CaptionFontSize">12</x:Double>
+        <x:Double x:Key="BodyStrongFontSize">14</x:Double>
+        <x:Double x:Key="TitleLargeFontSize">24</x:Double>
+        <x:Double x:Key="IconSizeSmall">12</x:Double>
+        <x:Double x:Key="IconSizeMedium">16</x:Double>
+        <x:Double x:Key="PagePaddingValue">24</x:Double>
+    </Application.Resources>
+  
+    <Application.Styles>
+        <fluent:FluentAvaloniaTheme />
+    </Application.Styles>
+    
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/hqzx.png"
+                      ToolTipText="Nexus - 红旗中学智慧校园系统"
+                      IsVisible="False">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="显示主窗口"/>
+                        <NativeMenuItemSeparator/>
+                        <NativeMenuItem Header="退出"/>
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+</Application>

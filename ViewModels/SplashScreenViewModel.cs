@@ -1,0 +1,171 @@
+using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Windows.Input;
+
+namespace Nexus.ViewModels
+{
+    public partial class SplashScreenViewModel : ViewModelBase
+    {
+        private bool _isNavigating = false;
+        public bool IsNavigating
+        {
+            get => _isNavigating;
+            set => SetProperty(ref _isNavigating, value);
+        }
+
+        private bool _hasError = false;
+        public bool HasError
+        {
+            get => _hasError;
+            set => SetProperty(ref _hasError, value);
+        }
+
+        private string _errorMessage = "";
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            set => SetProperty(ref _errorMessage, value);
+        }
+
+        private string _statusMessage = "点击开始绑定";
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        private bool _showCloseButton = false;
+        public bool ShowCloseButton
+        {
+            get => _showCloseButton;
+            set => SetProperty(ref _showCloseButton, value);
+        }
+
+        private bool _showStartButton = true;
+        public bool ShowStartButton
+        {
+            get => _showStartButton;
+            set => SetProperty(ref _showStartButton, value);
+        }
+
+        private bool _showRetryButton = false;
+        public bool ShowRetryButton
+        {
+            get => _showRetryButton;
+            set => SetProperty(ref _showRetryButton, value);
+        }
+
+        private bool _hasIncompleteData = false;
+        public bool HasIncompleteData
+        {
+            get => _hasIncompleteData;
+            set => SetProperty(ref _hasIncompleteData, value);
+        }
+
+        private string _incompleteDataMessage = "";
+        public string IncompleteDataMessage
+        {
+            get => _incompleteDataMessage;
+            set => SetProperty(ref _incompleteDataMessage, value);
+        }
+
+        private bool _canClose = true;
+        public bool CanClose
+        {
+            get => _canClose;
+            set => SetProperty(ref _canClose, value);
+        }
+
+        public ICommand StartCommand { get; }
+        public ICommand CloseCommand { get; }
+        public ICommand RetryCommand { get; }
+
+        public event Action? NavigateToMainRequested;
+        public event Action? CloseRequested;
+        public event Action? RetryRequested;
+
+        public SplashScreenViewModel()
+        {
+            StartCommand = new RelayCommand(OnStart, CanStart);
+            CloseCommand = new RelayCommand(OnClose, CanExecuteClose);
+            RetryCommand = new RelayCommand(OnRetry);
+        }
+
+        private bool CanStart()
+        {
+            return !_isNavigating;
+        }
+
+        private bool CanExecuteClose()
+        {
+            return _canClose;
+        }
+
+        private void OnStart()
+        {
+            if (_isNavigating) return;
+
+            IsNavigating = true;
+            HasError = false;
+            StatusMessage = "正在加载...";
+            NavigateToMainRequested?.Invoke();
+        }
+
+        private void OnClose()
+        {
+            if (!_canClose) return;
+            CloseRequested?.Invoke();
+        }
+
+        private void OnRetry()
+        {
+            HasError = false;
+            IsNavigating = true;
+            StatusMessage = "正在验证...";
+            ShowCloseButton = false;
+            RetryRequested?.Invoke();
+        }
+
+        public void SetLoadingState(string message)
+        {
+            IsNavigating = true;
+            HasError = false;
+            StatusMessage = message;
+            ShowStartButton = false;
+        }
+
+        public void SetErrorState(string errorMessage)
+        {
+            IsNavigating = false;
+            HasError = true;
+            ErrorMessage = errorMessage;
+            StatusMessage = "点击按钮重新绑定";
+            ShowCloseButton = true;
+            ShowStartButton = true;
+            ShowRetryButton = false;
+        }
+
+        public void SetIncompleteDataState(string message)
+        {
+            HasIncompleteData = true;
+            IncompleteDataMessage = message;
+            CanClose = false;
+            ShowCloseButton = true;
+        }
+
+        public void SetSuccessState()
+        {
+            IsNavigating = false;
+            HasError = false;
+            HasIncompleteData = false;
+            CanClose = true;
+        }
+
+        public void ClearIncompleteDataState()
+        {
+            HasIncompleteData = false;
+            IncompleteDataMessage = "";
+            CanClose = true;
+        }
+    }
+}

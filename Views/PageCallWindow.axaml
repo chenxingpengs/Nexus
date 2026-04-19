@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+        x:Class="Nexus.Views.PageCallWindow"
+        Title="寻人通知"
+        Width="600"
+        Height="400"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        Background="#F5F5F5"
+        Topmost="True"
+        SystemDecorations="BorderOnly"
+        ShowInTaskbar="False">
+
+  <Grid Margin="30">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0" Spacing="15">
+      <Border Background="#4A90E2" CornerRadius="8" Padding="15,10">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Text="&#x1F4E5;" FontSize="24" VerticalAlignment="Center" />
+          <TextBlock Text="寻人通知" FontSize="22" FontWeight="Bold" 
+                     Foreground="White" VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
+      
+      <TextBlock x:Name="TimeText" FontSize="14" Foreground="#999" 
+                 HorizontalAlignment="Right" Margin="0,0,0,5" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Background="White" CornerRadius="12" Padding="25" Margin="0,10">
+      <StackPanel Spacing="20">
+        <StackPanel Orientation="Horizontal" Spacing="15">
+          <TextBlock Text="学生姓名:" FontSize="16" Foreground="#666" Width="80" />
+          <TextBlock x:Name="StudentNameText" FontSize="20" FontWeight="Bold" 
+                     Foreground="#333" />
+        </StackPanel>
+        
+        <StackPanel Orientation="Horizontal" Spacing="15">
+          <TextBlock Text="所在班级:" FontSize="16" Foreground="#666" Width="80" />
+          <TextBlock x:Name="ClassNameText" FontSize="18" Foreground="#333" />
+        </StackPanel>
+        
+        <StackPanel x:Name="ReasonPanel" Spacing="10">
+          <TextBlock Text="传呼原因:" FontSize="16" Foreground="#666" />
+          <Border Background="#F9F9F9" CornerRadius="8" Padding="15">
+            <TextBlock x:Name="ReasonText" FontSize="16" Foreground="#333" 
+                       TextWrapping="Wrap" MaxWidth="450" />
+          </Border>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <Button x:Name="ConfirmButton" Grid.Row="2" 
+            Content="确认收到" 
+            Width="200" Height="50"
+            FontSize="18" 
+            Background="#4A90E2" 
+            Foreground="White"
+            CornerRadius="10" 
+            Cursor="Hand"
+            HorizontalAlignment="Center"
+            Click="ConfirmButton_Click" />
+  </Grid>
+</Window>

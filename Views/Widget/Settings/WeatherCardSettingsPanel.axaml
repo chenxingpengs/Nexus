@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Widget.Settings"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             x:Class="Nexus.Views.Widget.Settings.WeatherCardSettingsPanel"
+             x:DataType="vm:WeatherCardSettingsViewModel">
+    <StackPanel Spacing="16">
+        
+        <Grid ColumnDefinitions="Auto,*" Margin="0,8">
+            <TextBlock Text="自动定位" 
+                       FontSize="14" 
+                       Foreground="#616161" 
+                       VerticalAlignment="Center"/>
+            <ToggleSwitch Grid.Column="1" 
+                         IsChecked="{Binding IsAutoLocationMode}"
+                         HorizontalAlignment="Right"/>
+        </Grid>
+        
+        <Border Background="#E3F2FD" CornerRadius="8" Padding="12" 
+               IsVisible="{Binding IsAutoLocationMode}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Map}" FontSize="16" Foreground="#1976D2"/>
+                <TextBlock FontSize="13" Foreground="#1976D2" VerticalAlignment="Center">
+                    <Run Text="当前定位: "/>
+                    <Run Text="{Binding AutoLocationCity}" FontWeight="Medium"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+        
+        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsManualMode}">
+            <TextBox Text="{Binding CitySearchText}"
+                    Watermark="搜索城市..."
+                    IsEnabled="{Binding !IsSearching}"
+                    KeyDown="OnSearchTextBoxKeyDown"/>
+            <Button Grid.Column="1"
+                   Command="{Binding SearchCityCommand}"
+                   IsEnabled="{Binding !IsSearching}"
+                   Margin="8,0,0,0"
+                   CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <ui:SymbolIcon Symbol="Find" FontSize="14"/>
+                    <TextBlock Text="搜索" FontSize="13"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+        
+        <Border Background="#F5F5F5" CornerRadius="8" Padding="12" 
+               IsVisible="{Binding HasSearchResults}">
+            <ListBox ItemsSource="{Binding SearchResults}"
+                    SelectedItem="{Binding SelectedCity}"
+                    MaxHeight="200">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding Name}" 
+                                       FontSize="14" 
+                                       FontWeight="Medium"/>
+                            <TextBlock FontSize="12" Foreground="#757575">
+                                <Run Text="{Binding Province}"/>
+                                <Run Text=" · "/>
+                                <Run Text="{Binding CityId}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+        
+        <Grid ColumnDefinitions="Auto,*" Margin="0,8" 
+             IsVisible="{Binding HasWeatherLocation}">
+            <StackPanel Spacing="4">
+                <TextBlock Text="当前位置" FontSize="12" Foreground="#9E9E9E"/>
+                <TextBlock Text="{Binding CurrentCityName}" 
+                           FontSize="16" 
+                           FontWeight="Medium"
+                           Foreground="#1976D2"/>
+            </StackPanel>
+            <Button Grid.Column="1" 
+                   Command="{Binding ClearLocationCommand}"
+                   HorizontalAlignment="Right"
+                   Background="#FFEBEE"
+                   CornerRadius="6"
+                   IsVisible="{Binding IsManualMode}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="清除位置" Foreground="#E81123" FontSize="13"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+        
+        <TextBlock Text="自动定位模式会根据您的 IP 地址自动获取天气信息" 
+                   FontSize="12" 
+                   Foreground="#9E9E9E"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding IsAutoLocationMode}"/>
+        
+        <TextBlock Text="手动模式下，请搜索并选择城市来获取天气信息" 
+                   FontSize="12" 
+                   Foreground="#9E9E9E"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding IsManualMode}"/>
+        
+    </StackPanel>
+</UserControl>

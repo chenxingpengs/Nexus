@@ -1,0 +1,329 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels"
+        xmlns:converters="clr-namespace:Nexus.Converters"
+        xmlns:models="clr-namespace:Nexus.Models.Meeting"
+        x:Class="Nexus.Views.MeetingRoomWindow"
+        x:DataType="vm:MeetingRoomViewModel"
+        Title="会议"
+        Width="1400"
+        Height="800"
+        WindowStartupLocation="CenterScreen"
+        CanResize="True"
+        ExtendClientAreaToDecorationsHint="True"
+        Background="#1A1A2E">
+
+    <Window.Styles>
+        <Style Selector="Button.control-btn">
+            <Setter Property="Background" Value="#F44336"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,12"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        
+        <Style Selector="Button.control-btn:pointerover">
+            <Setter Property="Background" Value="#D32F2F"/>
+        </Style>
+
+        <Style Selector="Button.icon-btn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style Selector="Button.icon-btn:pointerover">
+            <Setter Property="Background" Value="#2A2A4A"/>
+        </Style>
+
+        <Style Selector="Border.info-card">
+            <Setter Property="Background" Value="#16213E"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <Style Selector="TextBlock.status-online">
+            <Setter Property="Foreground" Value="#4CAF50"/>
+        </Style>
+
+        <Style Selector="TextBlock.status-offline">
+            <Setter Property="Foreground" Value="#FF9800"/>
+        </Style>
+
+        <Style Selector="Border.participant-item">
+            <Setter Property="Background" Value="#1A1A2E"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Background="#1A1A2E">
+        
+        <!-- 顶部栏 -->
+        <Border Grid.Row="0" Background="#16213E" Padding="16,14">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <TextBlock Text="📹" FontSize="20" VerticalAlignment="Center"/>
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding MeetingTitle}" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="{Binding MeetingId}" 
+                                   FontSize="11" 
+                                   Foreground="#888"
+                                   FontFamily="Consolas"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Classes="info-card">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="⏱️" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding MeetingDurationFormatted}" 
+                                       FontSize="13" 
+                                       Foreground="#B0B0B0"
+                                       FontFamily="Consolas"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="info-card">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="8" Height="8" Fill="{Binding IsNoSignal, Converter={x:Static converters:BoolToColorConverter.Instance}}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ConnectionStatus}" 
+                                       FontSize="13" 
+                                       Foreground="#B0B0B0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="info-card">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="👥" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock>
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0}/{1}">
+                                        <Binding Path="AcceptedParticipantsCount"/>
+                                        <Binding Path="TotalParticipantsCount"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                            <TextBlock Text=" 人在线" 
+                                       FontSize="13" 
+                                       Foreground="#B0B0B0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <Button Grid.Column="2"
+                        Content="切换侧栏"
+                        Command="{Binding ToggleSidebarCommand}"
+                        Classes="icon-btn"
+                        ToolTip.Tip="显示/隐藏侧栏"
+                        Width="36"
+                        Height="36"/>
+            </Grid>
+        </Border>
+
+        <!-- 主内容区域 -->
+        <Grid Grid.Row="1">
+            <!-- 视频显示区域 -->
+            <Border Background="#0F0F23" CornerRadius="12" Margin="16,8" ClipToBounds="True">
+                <Grid>
+                    <Image x:Name="VideoImage"
+                           Stretch="UniformToFill"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+
+                    <StackPanel IsVisible="{Binding IsNoSignal}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="20">
+                        <Border Background="#1A1A2E" CornerRadius="100" Padding="30,25">
+                            <TextBlock Text="📺" FontSize="48" HorizontalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <TextBlock Text="等待视频信号" 
+                                       FontSize="22" 
+                                       FontWeight="SemiBold"
+                                       Foreground="#888"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="主持人尚未开始屏幕共享..." 
+                                       FontSize="14" 
+                                       Foreground="#666"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <Border Background="#16213E" CornerRadius="8" Padding="16,12" Margin="20,10,0,0">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="主持人:" Foreground="#888" FontSize="13"/>
+                                    <TextBlock Text="{Binding HostName}" FontSize="13" FontWeight="Medium" Foreground="#E0E0E0"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="端口:" Foreground="#888" FontSize="13"/>
+                                    <TextBlock Text="{Binding BroadcastPort}" FontSize="13" FontWeight="Medium" Foreground="#E0E0E0" FontFamily="Consolas"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 右侧边栏 -->
+            <Border IsVisible="{Binding IsSidebarVisible}"
+                    Background="#16213E" 
+                    Width="320"
+                    CornerRadius="12,0,0,12"
+                    Margin="0,8,16,8"
+                    HorizontalAlignment="Right">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    
+                    <!-- 参与者列表标题 -->
+                    <Border Grid.Row="0" Padding="16,14" BorderBrush="#2A2A4A" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="👥" FontSize="16" VerticalAlignment="Center"/>
+                                <TextBlock Text="参会班级" 
+                                           FontSize="16" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="White"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <Button Grid.Column="1"
+                                    Command="{Binding RefreshParticipantsCommand}"
+                                    Content="刷新"
+                                    Classes="icon-btn"
+                                    FontSize="12"
+                                    ToolTip.Tip="刷新参与者列表"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- 参与者列表 -->
+                    <ScrollViewer Grid.Row="1" 
+                                  VerticalScrollBarVisibility="Auto"
+                                  Padding="12,8">
+                        <ItemsControl ItemsSource="{Binding Participants}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="models:ParticipantInfo">
+                                    <Border Classes="participant-item">
+                                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+                                            <Border Grid.RowSpan="2" Grid.Column="0"
+                                                    Width="32" Height="32"
+                                                    CornerRadius="16"
+                                                    Background="#2A2A4A"
+                                                    Margin="0,0,12,0">
+                                                <TextBlock Text="🏫" 
+                                                           FontSize="16"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="1"
+                                                       Text="{Binding ClassName}"
+                                                       FontSize="14"
+                                                       FontWeight="Medium"
+                                                       Foreground="White"
+                                                       VerticalAlignment="Bottom"/>
+
+                                            <StackPanel Grid.Row="1" Grid.Column="1" 
+                                                        Orientation="Horizontal" 
+                                                        Spacing="8"
+                                                        Margin="0,4,0,0">
+                                                <Border Background="{Binding Status, Converter={x:Static converters:StatusToColorConverter.Instance}}"
+                                                        CornerRadius="10"
+                                                        Padding="8,3">
+                                                    <TextBlock Text="{Binding Status, Converter={x:Static converters:StatusToTextConverter.Instance}}"
+                                                               FontSize="11"
+                                                               Foreground="White"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- 会议信息 -->
+                    <Border Grid.Row="2" Padding="16,14" BorderBrush="#2A2A4A" BorderThickness="0,1,0,0">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="📋 会议信息" 
+                                       FontSize="14" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#888"/>
+                            
+                            <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Column="0" Text="会议ID:" Foreground="#666" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding MeetingId}" FontSize="12" Foreground="#E0E0E0" FontFamily="Consolas" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                                
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Column="0" Text="端口:" Foreground="#666" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding BroadcastPort}" FontSize="12" Foreground="#E0E0E0" FontFamily="Consolas" VerticalAlignment="Center"/>
+                                </Grid>
+                                
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Column="0" Text="IP地址:" Foreground="#666" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HostIp}" FontSize="12" Foreground="#E0E0E0" FontFamily="Consolas" VerticalAlignment="Center"/>
+                                </Grid>
+                                
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Column="0" Text="主持人:" Foreground="#666" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HostName}" FontSize="12" Foreground="#E0E0E0" VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 底部控制栏 -->
+        <Border Grid.Row="2" Background="#16213E" Padding="16,12">
+            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center" 
+                        Spacing="16"
+                        VerticalAlignment="Center">
+                
+                <Border Background="#1A1A2E" CornerRadius="8" Padding="16,10">
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="🎬" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="屏幕共享中" 
+                                       FontSize="13" 
+                                       Foreground="#4CAF50"
+                                       FontWeight="Medium"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <Rectangle Width="1" Fill="#2A2A4A"/>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="🔒" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="加密传输" 
+                                       FontSize="12" 
+                                       Foreground="#888"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Button Content="🚪 离开会议"
+                        Command="{Binding LeaveCommand}"
+                        Classes="control-btn"
+                        Padding="28,12"
+                        ToolTip.Tip="按 ESC 离开会议"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

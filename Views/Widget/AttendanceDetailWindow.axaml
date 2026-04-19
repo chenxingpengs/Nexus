@@ -1,0 +1,351 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nexus.ViewModels.Widget"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        x:Class="Nexus.Views.Widget.AttendanceDetailWindow"
+        x:DataType="vm:AttendanceDetailViewModel"
+        Title="考勤详情"
+        Width="500" Height="640"
+        WindowStartupLocation="CenterOwner"
+        CanResize="true"
+        MinWidth="420" MinHeight="520"
+        Background="#F5F7FA">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+        <Border Grid.Row="0" Background="#1976D2" Padding="16,12">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Calendar}" FontSize="20" Foreground="White"/>
+                    <TextBlock Text="{Binding ClassName}" FontSize="18" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding TimeSlotName}"
+                           FontSize="14"
+                           Foreground="White"
+                           Opacity="0.9"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding AttendanceDate}"
+                           FontSize="12"
+                           Foreground="White"
+                           Opacity="0.8"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" Padding="16">
+            <StackPanel Spacing="12">
+                <Border Background="White" CornerRadius="8" Padding="12" BoxShadow="0 1 3 0 #1A000000">
+                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="应到人数" FontSize="11" Foreground="#757575" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding ShouldAttend}" FontSize="22" FontWeight="Bold" Foreground="#1976D2" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                            <TextBlock Text="时段名称" FontSize="11" Foreground="#757575" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TimeSlotName}" FontSize="14" FontWeight="Medium" Foreground="#424242" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                            <TextBlock Text="考勤日期" FontSize="11" Foreground="#757575" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding AttendanceDate}" FontSize="14" FontWeight="Medium" Foreground="#424242" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Background="White" CornerRadius="8" Padding="16" BoxShadow="0 1 3 0 #1A000000">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="填写考勤信息" FontSize="15" FontWeight="SemiBold" Foreground="#424242"/>
+
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                                <TextBlock Text="应到人数" FontSize="12" Foreground="#616161" Margin="0,0,0,4"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Text="{Binding ShouldAttendInput, Mode=TwoWay}"
+                                             MinHeight="36"
+                                             FontSize="14"
+                                             TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="人" FontSize="12" Foreground="#757575" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="12,0,0,0">
+                                <TextBlock Text="实到人数（自动计算）" FontSize="12" Foreground="#616161" Margin="0,0,0,4"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Text="{Binding ActualAttend, Mode=OneWay}"
+                                             MinHeight="36"
+                                             FontSize="14"
+                                             TextAlignment="Center"
+                                             IsReadOnly="True"
+                                             Background="#F5F5F5"/>
+                                    <TextBlock Grid.Column="1" Text="人" FontSize="12" Foreground="#757575" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Margin="0,0,12,0">
+                                <TextBlock Text="请假人数" FontSize="12" Foreground="#616161" Margin="0,0,0,4"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Text="{Binding LeaveCount, Mode=OneWay}"
+                                             MinHeight="36"
+                                             FontSize="14"
+                                             TextAlignment="Center"
+                                             IsReadOnly="True"
+                                             Background="#F5F5F5"/>
+                                    <TextBlock Grid.Column="1" Text="人" FontSize="12" Foreground="#757575" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1">
+                                <TextBlock Text="缺勤人数" FontSize="12" Foreground="#616161" Margin="0,0,0,4"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Text="{Binding AbsentCount, Mode=OneWay}"
+                                             MinHeight="36"
+                                             FontSize="14"
+                                             TextAlignment="Center"
+                                             IsReadOnly="True"
+                                             Background="#F5F5F5"/>
+                                    <TextBlock Grid.Column="1" Text="人" FontSize="12" Foreground="#757575" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Background="#FFF3E0" CornerRadius="6" Padding="10" Margin="0,4,0,0">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Alert}" FontSize="14" Foreground="#FF9800" Margin="0,0,8,0" VerticalAlignment="Top"/>
+                                <TextBlock Text="学生在校内即视为到位，无需添加！仅添加请假或缺勤学生。" FontSize="11" Foreground="#E65100" TextWrapping="Wrap"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="White" CornerRadius="8" Padding="16" BoxShadow="0 1 3 0 #1A000000">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <TextBlock Text="异常学生列表" FontSize="15" FontWeight="SemiBold" Foreground="#424242" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2"
+                                    Command="{Binding AddStudentCommand}"
+                                    Background="#E3F2FD"
+                                    Foreground="#1976D2"
+                                    Padding="8,4"
+                                    CornerRadius="4"
+                                    FontSize="12">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Add}" FontSize="12"/>
+                                    <TextBlock Text="添加学生"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Border IsVisible="{Binding !HasStudents}" Background="#FAFAFA" CornerRadius="6" Padding="16,12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <ui:SymbolIcon Symbol="{x:Static ui:Symbol.People}" FontSize="24" Foreground="#BDBDBD" HorizontalAlignment="Center"/>
+                                <TextBlock Text="暂无异常学生（在校学生无需添加）" FontSize="12" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ItemsControl ItemsSource="{Binding StudentList}" IsVisible="{Binding HasStudents}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FAFAFA" CornerRadius="6" Padding="10" Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                            <TextBlock Text="{Binding StudentName}" FontSize="13" FontWeight="Medium" Foreground="#424242" VerticalAlignment="Center"/>
+                                            <Border Grid.Column="1"
+                                                    Background="{Binding StatusBackground}"
+                                                    CornerRadius="3"
+                                                    Padding="6,2"
+                                                    Margin="8,0,0,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="White"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding ReasonDisplay}"
+                                                       FontSize="11"
+                                                       Foreground="#9E9E9E"
+                                                       Margin="8,0,0,0"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
+                                                <Button Command="{Binding $parent[ItemsControl].((vm:AttendanceDetailViewModel)DataContext).EditStudentCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="Transparent"
+                                                        Padding="4"
+                                                        ToolTip.Tip="编辑">
+                                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Edit}" FontSize="14" Foreground="#1976D2"/>
+                                                </Button>
+                                                <Button Command="{Binding $parent[ItemsControl].((vm:AttendanceDetailViewModel)DataContext).DeleteStudentCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="Transparent"
+                                                        Padding="4"
+                                                        ToolTip.Tip="删除">
+                                                    <ui:SymbolIcon Symbol="{x:Static ui:Symbol.Delete}" FontSize="14" Foreground="#F44336"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="White" CornerRadius="8" Padding="16" BoxShadow="0 1 3 0 #1A000000">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="备注（可选）" FontSize="15" FontWeight="SemiBold" Foreground="#424242"/>
+                        <TextBox Text="{Binding Notes, Mode=TwoWay}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="60"
+                                 Watermark="如有特殊情况请填写备注"
+                                 FontSize="13"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="White" CornerRadius="8" Padding="16" BoxShadow="0 1 3 0 #1A000000">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="考勤教师" FontSize="15" FontWeight="SemiBold" Foreground="#424242"/>
+                        <ComboBox ItemsSource="{Binding Teachers}"
+                                  SelectedItem="{Binding SelectedTeacher}"
+                                  HorizontalAlignment="Stretch"
+                                  MinHeight="36">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Name}" FontSize="13"/>
+                                        <TextBlock Text="(班主任)" FontSize="11" Foreground="#757575" IsVisible="{Binding IsHeadTeacher}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="16,12">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Text="{Binding ErrorMessage}"
+                           FontSize="12"
+                           Foreground="#F44336"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="200"
+                           IsVisible="{Binding HasError}"/>
+                <Button Grid.Column="1"
+                        Content="取消"
+                        Command="{Binding CancelCommand}"
+                        MinWidth="72" Height="34"
+                        Background="#E0E0E0"
+                        Foreground="#424242"
+                        CornerRadius="6"/>
+                <Button Grid.Column="2"
+                        Content="提交考勤"
+                        Command="{Binding SaveCommand}"
+                        MinWidth="90" Height="34"
+                        Background="#1976D2"
+                        Foreground="White"
+                        CornerRadius="6"
+                        Margin="12,0,0,0"
+                        IsEnabled="{Binding CanSubmit}"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="0" Grid.RowSpan="3"
+                Background="#80000000"
+                IsVisible="{Binding IsLoading}"
+                ZIndex="100">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ui:ProgressRing IsActive="True" Width="40" Height="40"/>
+                <TextBlock Text="加载中..." FontSize="14" Foreground="White" Margin="0,12,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="0" Grid.RowSpan="3"
+                Background="#80000000"
+                IsVisible="{Binding ShowAddStudentDialog}"
+                ZIndex="100">
+            <Border Background="White" CornerRadius="12" Width="340" MinWidth="300" Padding="0">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Border Grid.Row="0" Background="#F5F5F5" Padding="16,12" CornerRadius="12,12,0,0">
+                        <TextBlock Text="{Binding DialogTitle}" FontSize="16" FontWeight="SemiBold" Foreground="#424242" HorizontalAlignment="Center"/>
+                    </Border>
+
+                    <Border Grid.Row="1" Padding="16">
+                        <StackPanel Spacing="12">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="学生状态" FontSize="12" Foreground="#616161"/>
+                            <Grid ColumnDefinitions="*,*">
+                                <Button Background="{Binding LeaveSelectedBackground}"
+                                        CornerRadius="6"
+                                        Padding="10,8"
+                                        Command="{Binding SelectLeaveStatusCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Border Width="16" Height="16" CornerRadius="8" BorderThickness="2" BorderBrush="{Binding LeaveRadioBorder}">
+                                            <Border CornerRadius="6" Background="{Binding LeaveRadioFill}" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="请假" FontSize="13" Foreground="#424242"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="1"
+                                        Background="{Binding AbsentSelectedBackground}"
+                                        CornerRadius="6"
+                                        Padding="10,8"
+                                        Margin="8,0,0,0"
+                                        Command="{Binding SelectAbsentStatusCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Border Width="16" Height="16" CornerRadius="8" BorderThickness="2" BorderBrush="{Binding AbsentRadioBorder}">
+                                            <Border CornerRadius="6" Background="{Binding AbsentRadioFill}" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="缺勤" FontSize="13" Foreground="#424242"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <Border Background="#F5F5F5" CornerRadius="6" Padding="8">
+                            <TextBlock Text="{Binding StatusDescription}" FontSize="11" Foreground="#757575" TextWrapping="Wrap"/>
+                        </Border>
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="学生姓名" FontSize="12" Foreground="#616161"/>
+                            <TextBox Text="{Binding DialogStudentName, Mode=TwoWay}"
+                                     Watermark="请输入学生姓名"
+                                     MinHeight="36"
+                                     FontSize="13"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="6" IsVisible="{Binding IsLeaveStatus}">
+                            <TextBlock FontSize="12" Foreground="#616161">
+                                <Run Text="请假原因"/>
+                                <Run Text=" *" Foreground="#F44336"/>
+                            </TextBlock>
+                            <TextBox Text="{Binding DialogLeaveReason, Mode=TwoWay}"
+                                     Watermark="请填写请假原因（如：生病、事假）"
+                                     MinHeight="36"
+                                     FontSize="13"/>
+                        </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="16,12">
+                        <Grid ColumnDefinitions="*,*">
+                            <Button Content="取消"
+                                    Command="{Binding CancelDialogCommand}"
+                                    Height="36"
+                                    Background="#E0E0E0"
+                                    Foreground="#424242"
+                                    CornerRadius="6"/>
+                            <Button Grid.Column="1"
+                                    Content="{Binding DialogConfirmText}"
+                                    Command="{Binding ConfirmDialogCommand}"
+                                    Height="36"
+                                    Background="#1976D2"
+                                    Foreground="White"
+                                    CornerRadius="6"
+                                    Margin="12,0,0,0"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</Window>

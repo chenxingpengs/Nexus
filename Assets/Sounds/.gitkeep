@@ -1,0 +1,11 @@
+# 声音文件目录
+
+此目录用于存放通知系统的声音文件。
+
+请按照 README.md 中的说明添加以下声音文件：
+- fire_alarm.mp3
+- air_raid_alert.mp3
+- earthquake_warning.mp3
+- emergency.mp3
+- alert.mp3
+- notification.mp3（可选）

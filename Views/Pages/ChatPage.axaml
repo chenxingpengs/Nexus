@@ -1,0 +1,274 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Nexus.ViewModels.Pages"
+             xmlns:models="clr-namespace:Nexus.Models.Chat"
+             xmlns:local="clr-namespace:Nexus.Views.Pages"
+             x:Class="Nexus.Views.Pages.ChatPage"
+             x:DataType="vm:ChatPageViewModel">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="SentMessageBackground">#1976D2</SolidColorBrush>
+        <SolidColorBrush x:Key="ReceivedMessageBackground">#E8E8E8</SolidColorBrush>
+        <local:FirstCharConverter x:Key="FirstCharConverter"/>
+        <local:TimeConverter x:Key="TimeConverter"/>
+        <local:CountToBoolConverter x:Key="CountToBoolConverter"/>
+    </UserControl.Resources>
+
+    <Grid ColumnDefinitions="280,*">
+        
+        <Border Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,*">
+                
+                <Border Grid.Row="0" Background="#FFFFFF" Padding="12" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+                    <TextBox Watermark="搜索会话..." 
+                             Background="#F5F5F5"
+                             CornerRadius="20"
+                             Padding="12,8"/>
+                </Border>
+                
+                <ScrollViewer Grid.Row="1">
+                    <ItemsControl ItemsSource="{Binding Conversations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:Conversation">
+                                <Border Background="Transparent"
+                                        Padding="12" 
+                                        Cursor="Hand"
+                                        PointerPressed="OnConversationClick">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        
+                                        <Border Width="48" Height="48" CornerRadius="24" Background="#1976D2">
+                                            <TextBlock Text="{Binding Name, Converter={StaticResource FirstCharConverter}}"
+                                                       FontSize="20"
+                                                       FontWeight="Bold"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0" 
+                                                           Text="{Binding Name}"
+                                                           FontWeight="Medium"
+                                                           FontSize="14"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding LastMessageTime, Converter={StaticResource TimeConverter}}"
+                                                           FontSize="11"
+                                                           Foreground="#999"/>
+                                            </Grid>
+                                            
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding LastMessage}"
+                                                           FontSize="12"
+                                                           Foreground="#666"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Border Grid.Column="1"
+                                                        Background="#F44336"
+                                                        CornerRadius="10"
+                                                        Padding="6,2"
+                                                        IsVisible="{Binding UnreadCount, Converter={StaticResource CountToBoolConverter}}">
+                                                    <TextBlock Text="{Binding UnreadCount}"
+                                                               FontSize="10"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+        
+        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+            
+            <Border Grid.Row="0" Background="#FFFFFF" Padding="16" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+                <TextBlock Text="{Binding SelectedConversation.Name}"
+                           FontSize="16"
+                           FontWeight="SemiBold"/>
+            </Border>
+            
+            <ScrollViewer Grid.Row="1" 
+                          Name="MessagesScrollViewer"
+                          Background="#F5F5F5"
+                          Padding="16">
+                <ItemsControl ItemsSource="{Binding Messages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="models:ChatMessage">
+                            <Panel>
+                                <Panel IsVisible="{Binding IsNewMessageDivider}">
+                                    <Grid Margin="0,16">
+                                        <Border Background="#E0E0E0" Height="1" VerticalAlignment="Center"/>
+                                        <Border Background="#F5F5F5" HorizontalAlignment="Center" Padding="8,0">
+                                            <TextBlock Text="-----以下为新消息----" 
+                                                       Foreground="#999"
+                                                       FontSize="12"/>
+                                        </Border>
+                                    </Grid>
+                                </Panel>
+                            
+                                <Panel IsVisible="{Binding !IsNewMessageDivider}">
+                                    <Panel IsVisible="{Binding IsMine}">
+                                        <StackPanel HorizontalAlignment="Right" Margin="0,8">
+                                            <Border Background="{StaticResource SentMessageBackground}"
+                                                    CornerRadius="12,12,4,12"
+                                                    Padding="12,8"
+                                                    MaxWidth="400">
+                                                <TextBlock Text="{Binding Content}"
+                                                           Foreground="White"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="14"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding SentAt, Converter={StaticResource TimeConverter}}"
+                                                       FontSize="10"
+                                                       Foreground="#999"
+                                                       HorizontalAlignment="Right"
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Panel>
+                                    
+                                    <Panel IsVisible="{Binding !IsMine}">
+                                        <StackPanel HorizontalAlignment="Left" Margin="0,8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Border Width="36" Height="36" CornerRadius="18" Background="#1976D2">
+                                                    <TextBlock Text="{Binding SenderName, Converter={StaticResource FirstCharConverter}}"
+                                                               FontSize="14"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding SenderName}"
+                                                           FontSize="12"
+                                                           Foreground="#666"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <Border Background="{StaticResource ReceivedMessageBackground}"
+                                                    CornerRadius="12,12,12,4"
+                                                    Padding="12,8"
+                                                    MaxWidth="400"
+                                                    Margin="44,4,0,0">
+                                                <TextBlock Text="{Binding Content}"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="14"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding SentAt, Converter={StaticResource TimeConverter}}"
+                                                       FontSize="10"
+                                                       Foreground="#999"
+                                                       Margin="44,4,0,0"/>
+                                        </StackPanel>
+                                    </Panel>
+                                </Panel>
+                            
+                            </Panel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            
+            <Border Grid.Row="2" Background="#FFFFFF" Padding="16" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="@" 
+                                Width="36" 
+                                Height="36" 
+                                Background="Transparent"
+                                Command="{Binding ShowMentionPanelCommand}"/>
+                    </StackPanel>
+                    
+                    <TextBox Grid.Column="1"
+                             Text="{Binding MessageInput}"
+                             Watermark="输入消息..."
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MaxHeight="100"
+                             Margin="12,0"
+                             Padding="12,8"
+                             CornerRadius="20"/>
+                    
+                    <Button Grid.Column="2"
+                            Content="发送"
+                            Command="{Binding SendMessageCommand}"
+                            Background="#1976D2"
+                            Foreground="White"
+                            CornerRadius="6"
+                            Padding="20,10"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2"
+                    IsVisible="{Binding IsMentionPanelVisible}"
+                    Background="#80000000"
+                    Padding="16">
+                <Border Background="#FFFFFF"
+                        CornerRadius="12"
+                        MaxHeight="300"
+                        VerticalAlignment="Bottom">
+                    <StackPanel Spacing="8">
+                        
+                        <TextBlock Text="选择要@的人"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Margin="12,12,12,0"/>
+                        
+                        <TextBox Text="{Binding MentionSearchText}"
+                                 Watermark="搜索成员..."
+                                 Margin="12,8"
+                                 Padding="10,6"
+                                 CornerRadius="8"/>
+                        
+                        <ScrollViewer MaxHeight="180">
+                            <ItemsControl ItemsSource="{Binding MentionMembers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="models:Participant">
+                                        <Border Background="Transparent"
+                                                Padding="12,8"
+                                                Cursor="Hand"
+                                                PointerPressed="OnMentionMemberClick">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                
+                                                <Border Width="32" 
+                                                        Height="32" 
+                                                        CornerRadius="16" 
+                                                        Background="#1976D2">
+                                                    <TextBlock Text="{Binding Name, Converter={StaticResource FirstCharConverter}}"
+                                                               FontSize="14"
+                                                               FontWeight="Bold"
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                
+                                                <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="2">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="13"
+                                                               FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding Role}"
+                                                               FontSize="11"
+                                                               Foreground="#999"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        
+                        <Button Content="取消"
+                                HorizontalAlignment="Stretch"
+                                Margin="12"
+                                Padding="12,8"
+                                Background="Transparent"
+                                BorderBrush="#E0E0E0"
+                                CornerRadius="8"
+                                Command="{Binding CloseMentionPanelCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

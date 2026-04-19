@@ -1,0 +1,163 @@
+using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+
+namespace Nexus.Converters
+{
+    public class BoolToStatusTextConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isConfigured)
+            {
+                return isConfigured ? "已配置" : "待配置";
+            }
+            return "待配置";
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class BoolToStatusColorConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isConfigured)
+            {
+                return isConfigured ? new SolidColorBrush(Color.Parse("#4CAF50")) : new SolidColorBrush(Color.Parse("#FF9800"));
+            }
+            return new SolidColorBrush(Color.Parse("#FF9800"));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class MissingToBackgroundConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isMissing)
+            {
+                return isMissing ? new SolidColorBrush(Color.Parse("#FFF8E1")) : new SolidColorBrush(Color.Parse("#FFFFFF"));
+            }
+            return new SolidColorBrush(Color.Parse("#FFFFFF"));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class BoolToMeetingStatusColorConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isInMeeting)
+            {
+                return isInMeeting ? new SolidColorBrush(Color.Parse("#4CAF50")) : new SolidColorBrush(Color.Parse("#9E9E9E"));
+            }
+            return new SolidColorBrush(Color.Parse("#9E9E9E"));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class CountToInvertedBoolConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is int count)
+            {
+                return count == 0;
+            }
+            return true;
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class BoolToColorConverter : IValueConverter
+    {
+        public static readonly BoolToColorConverter Instance = new();
+
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is bool isNoSignal)
+            {
+                return isNoSignal ? new SolidColorBrush(Color.Parse("#FF9800")) : new SolidColorBrush(Color.Parse("#4CAF50"));
+            }
+            return new SolidColorBrush(Color.Parse("#FF9800"));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class StatusToColorConverter : IValueConverter
+    {
+        public static readonly StatusToColorConverter Instance = new();
+
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is string status)
+            {
+                return status.ToLower() switch
+                {
+                    "accepted" => new SolidColorBrush(Color.Parse("#4CAF50")),
+                    "invited" => new SolidColorBrush(Color.Parse("#2196F3")),
+                    "rejected" => new SolidColorBrush(Color.Parse("#F44336")),
+                    "left" => new SolidColorBrush(Color.Parse("#FF9800")),
+                    _ => new SolidColorBrush(Color.Parse("#9E9E9E"))
+                };
+            }
+            return new SolidColorBrush(Color.Parse("#9E9E9E"));
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class StatusToTextConverter : IValueConverter
+    {
+        public static readonly StatusToTextConverter Instance = new();
+
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is string status)
+            {
+                return status.ToLower() switch
+                {
+                    "invited" => "待确认",
+                    "accepted" => "已加入",
+                    "rejected" => "已拒绝",
+                    "left" => "已离开",
+                    _ => status
+                };
+            }
+            return "未知";
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
